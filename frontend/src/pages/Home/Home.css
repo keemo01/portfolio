@@ -66,3 +66,21 @@
     align-items: center;
     border-bottom: 1px solid #000000;
 }
+
+.market-cap{
+    text-align: right;
+}
+
+•table-layout:last-child{
+    border: none;
+}
+
+.table-layout div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.table-layout div img {
+    width: 35px;
+}
