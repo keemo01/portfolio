@@ -1,10 +1,27 @@
 import React, { useContext, useEffect, useState } from 'react';
 import './Home.css';
 import { CoinContext } from '../../context/CoinContext';
+import{ Link } from 'react-router-dom';
 
 const Home = () => {
   const { allCoin, currency } = useContext(CoinContext); // Destructure context to get allCoin and currency
   const [displayCoin, setDisplayCoin] = useState([]);
+  const [input, setInput] = useState('');
+
+  const inputHandler = (event) => {
+   setInput (event. target. value);
+   if(event.target.value === ""){
+      setDisplayCoin(allCoin);
+   }
+  } 
+
+  const searchHandler = async (event) => {
+    event. preventDefault();
+    const coins = await allCoin.filter((item)=>{
+    return item.name.toLowerCase().includes(input.toLowerCase())
+  })
+  setDisplayCoin(coins);
+}
 
   useEffect(() => {
     setDisplayCoin(allCoin); // Set coins to display
@@ -13,13 +30,18 @@ const Home = () => {
   return (
     <div className="home">
       <div className="hero">
-        <h1>Newest<br /> Crypto Portfolio Website</h1>
+        <h1>Newest<br /> Crypto Website</h1>
         <p>
           Offering latest news, Access to bots, up-to-date prices, 
           and information on Crypto Projects
         </p>
-        <form>
-          <input type="text" placeholder="Search for Crypto.." />
+        <form onSubmit={searchHandler}>
+          <input onChange={inputHandler} list='coinlist' value={input} type="text" placeholder="Search for Crypto.." required/>
+
+          <datalist id='coinlist'>
+          {allCoin.map((item, index)=>(<option key={index} value={item.name}/>))}
+          </datalist>
+
           <button type="submit">Search</button>
         </form>
       </div>
@@ -34,12 +56,12 @@ const Home = () => {
         </div>
 
         {/* Render Coins */}
-        {displayCoin.slice(0, 10).map((coin) => (
-          <div className="table-layout" key={coin.id}>
+        {displayCoin.slice(0, 10).map((coin, index) => (
+          <Link to={`/coin/${coin.id}`} className="table-layout" key={index}>
             <p>{coin.market_cap_rank}</p> {/* Rank */}
             <div>
               <img src={coin.image} alt={`${coin.name} logo`} />
-              {coin.name} - {coin.symbol.toUpperCase()}
+              <p>{coin.name + " - " + coin.symbol}</p>
             </div> {/* Name, Symbol, and Logo */}
             <p>
               {currency.symbol} {coin.current_price.toLocaleString()} {/* Dynamic Currency Symbol */}
@@ -55,7 +77,7 @@ const Home = () => {
             <p className="market-cap">
               {currency.symbol} {coin.market_cap.toLocaleString()} {/* Dynamic Currency Symbol */}
             </p> {/* Market Cap */}
-          </div>
+          </Link>
         ))}
       </div>
     </div>

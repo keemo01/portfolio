@@ -1,86 +1,114 @@
-.home{
+.home {
     padding: 0px 10px;
     padding-bottom: 100px;
-}
-
-.hero{
-    max-width: 600px; 
-    margin: 80px auto; 
+    color: white; /* Set text color to white */
+    background: linear-gradient(to right, #af75e6, #26d25c);
+  }
+  
+  .hero {
+    max-width: 600px;
+    margin: 80px auto;
     display: flex;
-    flex-direction: column; 
-    align-items: center; 
+    flex-direction: column;
+    align-items: center;
     text-align: center;
     gap: 30px;
-}
-
-.hero h1 {
+  }
+  
+  .hero h1 {
     font-size: max(4vw, 36px);
-}
-
-.hero p{
+    background: linear-gradient(to right, #05e959, #0bc0e0);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -moz-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    -moz-text-fill-color: transparent;
+  }
+  
+  .hero p {
     width: 75%;
-    color: #000000;
     line-height: 1.5;
-}
-
-.hero form{
-    padding: 8px; width: 80%;
-    background-color: white; 
-    border-radius: 5px; 
-    font-size: 20px; 
+    color: white;
+  }
+  
+  .hero form {
+    padding: 8px; 
+    width: 80%;
+    background-color: white;
+    border-radius: 5px;
+    font-size: 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-}
-
-.hero input{
-    flex: 1; 
-    font-size: 16px; 
-    outline: none; 
-    border: none; 
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .hero input {
+    flex: 1;
+    font-size: 16px;
+    outline: none;
+    border: none;
     padding-left: 10px;
-}
-
-.hero button{
+  }
+  
+  .hero button {
     border: none;
     background: #e97305;
-    color: white; 
+    color: white;
     font-size: 16px;
-    padding: 10px 30px; 
+    padding: 10px 30px;
     border-radius: 5px;
     cursor: pointer;
-}
-
-.crypto-table{
-    max-width: 800px; margin: auto;
-    background: linear-gradient(rgba(236, 236, 236, 0.15),rgba(105,2,
-    153,0.15));
+    transition: background 0.3s ease, transform 0.2s ease;
+  }
+  
+  .hero button:hover {
+    background: #ff8533;
+    transform: scale(1.05);
+  }
+  
+  .crypto-table {
+    max-width: 800px; 
+    margin: auto;
+    background: linear-gradient(rgba(236, 236, 236, 0.15), rgba(105,2,153,0.15));
     border-radius: 15px;
-}
-
-.table-layout{
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .table-layout {
     display: grid;
     grid-template-columns: 0.5fr 2fr 1fr 1fr 1.5fr;
     padding: 15px 20px;
     align-items: center;
     border-bottom: 1px solid #000000;
-}
-
-.market-cap{
+    transition: background-color 0.3s ease;
+  }
+  
+  .table-layout:hover {
+    background-color: rgba(233, 115, 5, 0.05);
+  }
+  
+  .market-cap {
     text-align: right;
-}
-
-•table-layout:last-child{
+  }
+  
+  .table-layout:last-child {
     border: none;
-}
-
-.table-layout div {
+  }
+  
+  .table-layout div {
     display: flex;
     align-items: center;
     gap: 10px;
-}
-
-.table-layout div img {
+  }
+  
+  .table-layout div img {
     width: 35px;
-}
+    transition: transform 0.3s ease;
+  }
+  
+  .table-layout div img:hover {
+    transform: scale(1.1);
+  }

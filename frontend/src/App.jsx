@@ -1,9 +1,10 @@
 import React from "react";
 import Navbar from "./components/Navbar/Navbar";
 import { Routes, Route } from "react-router-dom";
-import Home from './pages/Home/Home';  // Make sure Home.jsx is in the correct path
-import Coin from './pages/Coin/Coin';  // Make sure Coin.jsx is in the correct path
-
+import Home from './pages/Home/Home';  
+import Coin from './pages/Coin/Coin';
+import SignUp from './pages/SignUp/SignUp';
+import Footer from "./components/Footer/Footer";
 
 const App = () => {
   return (
@@ -12,9 +13,9 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Home/>}/>
         <Route path="/coin/:coinId" element={<Coin/>}/>
-
-
+        <Route path="/signup" element={<SignUp />} />
       </Routes>
+      <Footer />
     </div>
   )
 }
