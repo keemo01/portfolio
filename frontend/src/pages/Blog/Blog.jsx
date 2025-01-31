@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { UserContext } from '../../context/UserContext';
-import { Link } from 'react-router-dom';
 import './Blog.css';
 
 const Blog = () => {
@@ -63,7 +63,7 @@ const Blog = () => {
 
     return (
         <div className="blog-container">
-            <h1>PríceSync Blog</h1>
+            <h1>Cryptonia Blog</h1>
             
             {user && (
                 <>
@@ -114,17 +114,28 @@ const Blog = () => {
                     blogs.map((blog) => (
                         <div className="blog-post" key={blog.id}>
                             <div className="post-header">
-                                <h3>{blog.title}</h3>
+                                <Link to={`/blog/${blog.id}`} className="post-title-link">
+                                    <h3>{blog.title}</h3>
+                                </Link>
                                 {user && user.username === blog.author && (
                                     <button 
                                         className="delete-btn"
-                                        onClick={() => handleDelete(blog.id)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(blog.id);
+                                        }}
                                     >
                                         Delete
                                     </button>
                                 )}
                             </div>
-                            <p>{blog.content}</p>
+                            <Link to={`/blog/${blog.id}`} className="post-content-link">
+                                <p>
+                                    {blog.content.length > 150 
+                                        ? `${blog.content.substring(0, 150)}...` 
+                                        : blog.content}
+                                </p>
+                            </Link>
                             <div className="post-footer">
                                 <span>
                                     {formatDate(blog.createdAt)} - {formatTime(blog.createdAt)}

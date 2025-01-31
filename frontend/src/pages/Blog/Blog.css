@@ -142,26 +142,3 @@
 .post-content-link:hover p {
     color: #444;
 }
-
-.detailed-post {
-    margin-top: 2rem;
-    padding: 2rem;
-}
-
-.detailed-post .post-content {
-    line-height: 1.6;
-    font-size: 1.1rem;
-    margin: 1.5rem 0;
-}
-
-.back-link {
-    display: inline-block;
-    margin-bottom: 1.5rem;
-    color: #007bff;
-    text-decoration: none;
-    font-weight: 500;
-}
-
-.back-link:hover {
-    text-decoration: underline;
-}

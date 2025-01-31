@@ -70,6 +70,14 @@ def get_blogs(request):
     serializer = BlogSerializer(blogs, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+# Add to tracker/views.py
+#Blog Detail
+@api_view(['GET'])
+def blog_detail(request, pk):
+    blog = get_object_or_404(Blog, pk=pk)
+    serializer = BlogSerializer(blog)
+    return Response(serializer.data)
+
 
 
 @api_view(['POST'])
