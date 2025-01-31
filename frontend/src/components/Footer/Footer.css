@@ -1,14 +1,19 @@
 .footer {
     position: fixed;
+    color: white;
+    background-color: black;
     left: 0;
     bottom: 0;
     width: 100%;
-    text-align: center;
-    margin: auto;
-    max-width: 100%;
-    border-top: 1px solid #989898;
-    padding: 15px 0px;
-    font-size: 13px;
-    background-color: #f4f4f4;
-    z-index: 1000;
+    height: 50px; /* Explicit height */
+    /* rest of your existing styles */
+}
+
+.page-container {
+    position: relative;
+    min-height: 100vh;
+}
+
+.content-wrap {
+    padding-bottom: 70px; /* Same as blog-container bottom padding */
 }
