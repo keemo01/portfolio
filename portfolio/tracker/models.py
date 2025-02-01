@@ -14,3 +14,10 @@ class Blog(models.Model):
 
     def __str__(self):
         return self.title
+
+class BlogMedia(models.Model):
+    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='media')
+    file = models.FileField(upload_to='blog_media/')  # Stores images/videos
+
+    def __str__(self):
+        return f"Media for {self.blog.title}"

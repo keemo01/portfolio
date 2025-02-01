@@ -21,6 +21,16 @@ const BlogPost = () => {
 
     if (!blog) return <div className="blog-container">Loading...</div>;
 
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
+    const formatTime = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(' ', '');
+    };
+
     return (
         <div className="blog-container">
             <Link to="/blog" className="back-link">← Back to Blog</Link>
@@ -33,13 +43,21 @@ const BlogPost = () => {
                         <p key={index}>{paragraph}</p>
                     ))}
                 </div>
+                <div className="post-media">
+                    {blog.media.map((file, index) => (
+                        file.file.endsWith('.mp4') || file.file.endsWith('.mov') ? (
+                            <video key={index} controls>
+                                <source src={file.file} type="video/mp4" />
+                                Your browser does not support videos.
+                            </video>
+                        ) : (
+                            <img key={index} src={file.file} alt="Blog Media" />
+                        )
+                    ))}
+                </div>
                 <div className="post-footer">
                     <span>
-                        {new Date(blog.createdAt).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            year: 'numeric' 
-                        })} - {new Date(blog.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {formatDate(blog.created_at)} - {formatTime(blog.created_at)}
                     </span>
                     <span className="author">By {blog.author}</span>
                 </div>

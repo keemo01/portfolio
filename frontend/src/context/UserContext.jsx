@@ -1,38 +1,76 @@
 import React, { createContext, useState, useEffect } from 'react';
+import axios from 'axios';
 
-export const UserContext = createContext();
+// Create a context with default values
+const UserContext = createContext({
+  user: null,
+  setUser: () => console.warn('No UserProvider found'),
+  loading: true
+});
 
-export const UserProvider = ({ children }) => {
-    const [user, setUser] = useState(null); // User state
+const UserProvider = ({ children }) => {
+  // This is to hold the user data and loading status
+  const [user, setUser] = useState(() => {
+    // Check localStorage for existing user data
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            fetch('http://127.0.0.1:8000/api/test-token/', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Token ${token}`,
-                },
-            })
-                .then((response) => response.ok ? response.json() : Promise.reject())
-                .then((data) => {
-                    setUser({ username: data.username, email: data.email, token }); // Include token in user state
-                })
-                .catch(() => {
-                    localStorage.removeItem('token'); // Remove invalid token
-                    setUser(null);
-                });
+  useEffect(() => {
+    // Function to verify the token and fetch user data
+    const verifyToken = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false); // No token, stop loading
+        return;
+      }
+      
+      try {
+        const response = await axios.get('http://127.0.0.1:8000/api/test_token/', {
+          headers: { Authorization: `Token ${token}` }
+        });
+        
+        if (response?.data?.user) {
+          // Set the user data if token is valid
+          setUser({
+            token,
+            username: response.data.user.username,
+            email: response.data.user.email
+          });
         }
-    }, []);
-
-    const logout = () => {
-        localStorage.removeItem('token'); // Remove token
-        setUser(null); // Reset user state
+      } catch (error) {
+        // Remove invalid token and reset user data
+        localStorage.removeItem('token');
+        setUser(null);
+      } finally {
+        setLoading(false); // Stop loading after verification
+      }
     };
 
-    return (
-        <UserContext.Provider value={{ user, setUser, logout }}>
-            {children}
-        </UserContext.Provider>
-    );
+    verifyToken();
+  }, []);
+
+  useEffect(() => {
+    // Update localStorage whenever user state changes
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('user');
+    }
+  }, [user]);
+
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+  };
+
+  return (
+    // Give the user's data and loading status to the context
+    <UserContext.Provider value={{ user, setUser, loading, logout }}>
+      {!loading && children} {/* Render children only when not loading */}
+    </UserContext.Provider>
+  );
 };
+
+export { UserContext, UserProvider };

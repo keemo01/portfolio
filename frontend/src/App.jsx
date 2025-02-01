@@ -7,8 +7,8 @@ import SignUp from './pages/SignUp/SignUp';
 import Footer from './components/Footer/Footer';
 import Login from './pages/Login/Login';
 import Blog from './pages/Blog/Blog';
+import Profile from './pages/Profile/Profile';
 import BlogPost from './pages/Blog/BlogPost';
-import CreateBlog from './pages/Blog/CreateBlog';
 import { UserProvider } from './context/UserContext';
 
 const App = () => {
@@ -22,8 +22,8 @@ const App = () => {
                     <Route path="/signup" element={<SignUp />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/blog" element={<Blog />} />
-                    <Route path="/blog/create" element={<CreateBlog />} />
                     <Route path="/blog/:id" element={<BlogPost />} />
+                    <Route path="/profile" element={<Profile />} />
                 </Routes>
                 <Footer />
             </div>

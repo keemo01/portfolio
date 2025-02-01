@@ -143,3 +143,17 @@
       background-color: #ddd;
     }
   }
+
+.navigation-bar ul li a {
+    color: white;
+    text-decoration: none;
+}
+
+.navigation-bar ul li a:hover {
+    color: #ddd; /* Slightly lighter color on hover */
+}
+
+/* Ensure visited links are also white */
+.navigation-bar ul li a:visited {
+    color: white;
+}

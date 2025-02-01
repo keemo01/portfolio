@@ -8,7 +8,9 @@ const Blog = () => {
     const [blogs, setBlogs] = useState([]);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
+    const [media, setMedia] = useState([]); // Store uploaded images/videos
     const [isFormOpen, setIsFormOpen] = useState(false);
+    
     const { user } = useContext(UserContext);
 
     useEffect(() => {
@@ -29,42 +31,53 @@ const Blog = () => {
         .catch((error) => console.error('Error deleting blog:', error));
     };
 
-    const handleCreateBlog = (e) => {
+    const handleMediaChange = (e) => {
+        setMedia([...e.target.files]); // Store selected files
+    };
+
+    const handleCreateBlog = async (e) => {
         e.preventDefault();
-        axios.post('http://127.0.0.1:8000/api/blogs/create/', { title, content }, {
-            headers: { Authorization: `Token ${user.token}` },
-        })
-        .then(() => {
+        
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('content', content);
+
+        // Append each selected file
+        media.forEach((file) => {
+            formData.append('media', file);
+        });
+
+        try {
+            await axios.post('http://127.0.0.1:8000/api/blogs/create/', formData, {
+                headers: {
+                    'Authorization': `Token ${user.token}`,
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
             setTitle('');
             setContent('');
+            setMedia([]); // Clear selected files
             setIsFormOpen(false);
             fetchBlogs();
-        })
-        .catch((error) => console.error('Error creating blog:', error));
+        } catch (error) {
+            console.error('Error creating blog:', error);
+        }
     };
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric' 
-        });
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     };
 
     const formatTime = (dateString) => {
         const date = new Date(dateString);
-        return date.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            minute: '2-digit', 
-            hour12: true 
-        }).replace(' ', '');
+        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(' ', '');
     };
 
     return (
         <div className="blog-container">
             <h1>Cryptonia Blog</h1>
-            
+
             {user && (
                 <>
                     <button 
@@ -90,6 +103,15 @@ const Blog = () => {
                                 placeholder="Write your content here..."
                                 required
                             />
+                            <div>
+                                <label>Upload Images/Videos:</label>
+                                <input 
+                                    type="file"
+                                    accept="image/*,video/*"
+                                    multiple
+                                    onChange={handleMediaChange}
+                                />
+                            </div>
                             <div className="form-actions">
                                 <button 
                                     type="button" 
@@ -107,6 +129,7 @@ const Blog = () => {
                 </>
             )}
 
+            {/* Display blog posts */}
             <div className="blog-posts">
                 {blogs.length === 0 ? (
                     <div className="empty-state">No blog posts found</div>
@@ -129,6 +152,7 @@ const Blog = () => {
                                     </button>
                                 )}
                             </div>
+
                             <Link to={`/blog/${blog.id}`} className="post-content-link">
                                 <p>
                                     {blog.content.length > 150 
@@ -136,9 +160,24 @@ const Blog = () => {
                                         : blog.content}
                                 </p>
                             </Link>
+
+                            {/* Display images and videos */}
+                            <div className="post-media">
+                                {blog.media.map((file, index) => (
+                                    file.file.endsWith('.mp4') || file.file.endsWith('.mov') ? (
+                                        <video key={index} controls>
+                                            <source src={file.file} type="video/mp4" />
+                                            Your browser does not support videos.
+                                        </video>
+                                    ) : (
+                                        <img key={index} src={file.file} alt="Blog Media" />
+                                    )
+                                ))}
+                            </div>
+
                             <div className="post-footer">
                                 <span>
-                                    {formatDate(blog.createdAt)} - {formatTime(blog.createdAt)}
+                                    {formatDate(blog.created_at)} - {formatTime(blog.created_at)}
                                 </span>
                                 <span className="author">By {blog.author}</span>
                             </div>
