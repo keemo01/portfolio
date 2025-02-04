@@ -2,7 +2,11 @@
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import change_password, signup, login, logout, get_blogs, create_blog, delete_blog, blog_detail, user_profile
+from .views import (
+    change_password, signup, login, logout, 
+    get_blogs, create_blog, delete_blog, 
+    blog_detail, user_profile, user_blogs
+)
 
 urlpatterns = [
     path('signup/', signup, name='signup'),
@@ -14,6 +18,7 @@ urlpatterns = [
     path('blogs/delete/<int:blog_id>/', delete_blog, name='delete_blog'),
     path('profile/', user_profile, name='user_profile'),
     path('change-password/', change_password, name='change_password'),
+    path('user-blogs/', user_blogs, name='user_blogs'),  # Make sure this matches exactly
 ]
 
 # Serve media files in development

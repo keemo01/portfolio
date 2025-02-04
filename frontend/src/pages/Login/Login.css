@@ -1,65 +1,65 @@
 .login {
-    padding: 0px 10px; 
-    padding-bottom: 100px; /* Extra padding at the bottom */
-    display: flex;
-    flex-direction: column;
-    align-items: center; 
-    justify-content: center;
-    min-height: 100vh; /* Set minimum height to fill viewport */
-    background: linear-gradient(to right,#39f8ff, hsl(241, 92%, 20%)); /* Background gradient */
-  }
-  
-  .login h2 {
-    font-size: max(3vw, 36px); 
-    color: #fff; /* Text color */
-    text-align: center; /* Center text alignment */
-    margin-bottom: 20px; /* Spacing below the heading */
-  }
-  
-  .login form {
-    background-color: white; /* Form background color */
-    padding: 30px; 
-    width: 100%; /* Form width */
-    max-width: 400px; 
-    border-radius: 10px; 
-    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); /* Shadow effect */
-    display: flex;
-    flex-direction: column;
-    gap: 15px; 
-  }
-  
-  .login input {
-    padding: 12px; 
-    font-size: 16px; 
-    border: 1px solid #ddd; /* Border for input fields */
-    border-radius: 5px; /* Rounded corners for input fields */
-    outline: none; /* Remove default outline on focus */
-    transition: border-color 0.3s ease-in-out; 
-  }
-  
-  .login input:focus {
-    border-color: #e97305; /* Border color on focus */
-  }
-  
-  .login button {
-    background: #e97305; /* Button background color */
-    color: white; /* Button text color */
-    font-size: 16px; /* Button font size */
-    padding: 12px;
-    border-radius: 5px; /* Button rounded corners */
-    border: none; 
-    cursor: pointer; 
-    transition: background-color 0.3s ease-in-out, transform 0.2s ease-in-out; /* Button hover transition effects */
-  }
-  
-  .login button:hover {
-    background-color: #ff8533; /* Button hover background color */
-    transform: scale(1.05); /* Button hover scale effect */
-  }
-  
-  .login p {
-    text-align: center; /* Center text alignment for error message */
-    color: #ff4d4d; 
-    font-size: 14px; 
-    margin-top: 10px; /* Spacing above the error message */
-  }
+  padding: 0px 10px; 
+  padding-bottom: 100px; /* Extra padding at the bottom */
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+  justify-content: center;
+  min-height: 100vh; /* Set minimum height to fill viewport */
+  background: linear-gradient(to right,#39f8ff, hsl(241, 92%, 20%)); /* Background gradient */
+}
+
+.login h2 {
+  font-size: max(3vw, 36px); 
+  color: #fff; /* Text color */
+  text-align: center; /* Center text alignment */
+  margin-bottom: 20px; /* Spacing below the heading */
+}
+
+.login form {
+  background-color: white; /* Form background color */
+  padding: 30px; 
+  width: 100%; /* Form width */
+  max-width: 400px; 
+  border-radius: 10px; 
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); /* Shadow effect */
+  display: flex;
+  flex-direction: column;
+  gap: 15px; 
+}
+
+.login input {
+  padding: 12px; 
+  font-size: 16px; 
+  border: 1px solid #ddd; /* Border for input fields */
+  border-radius: 5px; /* Rounded corners for input fields */
+  outline: none; /* Remove default outline on focus */
+  transition: border-color 0.3s ease-in-out; 
+}
+
+.login input:focus {
+  border-color: #e97305; /* Border color on focus */
+}
+
+.login button {
+  background: #e97305; /* Button background color */
+  color: white; /* Button text color */
+  font-size: 16px; /* Button font size */
+  padding: 12px;
+  border-radius: 5px; /* Button rounded corners */
+  border: none; 
+  cursor: pointer; 
+  transition: background-color 0.3s ease-in-out, transform 0.2s ease-in-out; /* Button hover transition effects */
+}
+
+.login button:hover {
+  background-color: #ff8533; /* Button hover background color */
+  transform: scale(1.05); /* Button hover scale effect */
+}
+
+.login p {
+  text-align: center; /* Center text alignment for error message */
+  color: #ff4d4d; 
+  font-size: 14px; 
+  margin-top: 10px; /* Spacing above the error message */
+}

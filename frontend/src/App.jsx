@@ -3,13 +3,14 @@ import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar/Navbar';
 import Home from './pages/Home/Home';
 import Coin from './pages/Coin/Coin';
-import SignUp from './pages/SignUp/SignUp';
+import SignUp from './pages/Signup/Signup';
 import Footer from './components/Footer/Footer';
 import Login from './pages/Login/Login';
 import Blog from './pages/Blog/Blog';
 import Profile from './pages/Profile/Profile';
 import BlogPost from './pages/Blog/BlogPost';
 import { UserProvider } from './context/UserContext';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 const App = () => {
     return (

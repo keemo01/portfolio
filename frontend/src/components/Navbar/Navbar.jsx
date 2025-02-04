@@ -8,6 +8,7 @@ import { UserContext } from '../../context/UserContext'; // Import UserContext
 import React, { useContext } from 'react'; // Import React and useContext hook
 import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate for navigation
 import axios from 'axios'; // Import axios for API requests
+import { FaUserCircle } from 'react-icons/fa'; // Import user icon
 
 const Navbar = () => {
     const { setCurrency } = useContext(CoinContext); // Destructure setCurrency from CoinContext
@@ -52,6 +53,11 @@ const Navbar = () => {
         }
     };
 
+    // Handle profile icon click
+    const handleProfileClick = () => {
+        navigate('/profile');
+    };
+
     return (
         <div className='navigation-bar'>
             <Link to={'/'}>
@@ -59,7 +65,8 @@ const Navbar = () => {
             </Link>
             <ul>
                 <Link to={'/'}><li>Home</li></Link>
-                <Link to={'/profile'}><li>Profile</li></Link>
+                {/* Remove the profile link */}
+                {/* <Link to={'/profile'}><li>Profile</li></Link> */}
                 <li>Features</li>
                 <li>Pricing</li>
                 <li><Link to="/blog">Blog</Link></li>
@@ -70,9 +77,14 @@ const Navbar = () => {
                     <option value="eur">EUR</option>
                     <option value="gbp">GBP</option>
                 </select>
-                {user ? ( // Show Logout when logged in
+                {user ? ( // Show Logout and Profile Icon when logged in
                     <>
                         <span className="welcome-user">Welcome, {user.username}</span>
+                        <FaUserCircle 
+                            size={30} 
+                            onClick={handleProfileClick} 
+                            style={{ cursor: 'pointer', marginLeft: '1rem' }} 
+                        />
                         <button onClick={handleLogout}>Logout</button>
                     </>
                 ) : ( // Show Login/SignUp when not logged in

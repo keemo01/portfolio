@@ -156,6 +156,31 @@ def delete_blog(request, blog_id):
     blog.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def user_blogs(request):
+    """
+    Fetch blogs created by the authenticated user.
+    """
+    try:
+        # Add print statements for debugging
+        print(f"Fetching blogs for user: {request.user.username}")
+        blogs = Blog.objects.filter(author=request.user).order_by('-created_at')
+        print(f"Found {blogs.count()} blogs")
+        
+        serializer = BlogSerializer(blogs, many=True, context={'request': request})
+        return Response({
+            'blogs': serializer.data,
+            'count': blogs.count()
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        print(f"Error in user_blogs: {str(e)}")
+        return Response(
+            {'detail': f'Error fetching user blogs: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 # Binance Real-time Data
 class BinanceRealtime(View):
     """
