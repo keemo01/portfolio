@@ -9,6 +9,7 @@ import Login from './pages/Login/Login';
 import Blog from './pages/Blog/Blog';
 import Profile from './pages/Profile/Profile';
 import BlogPost from './pages/Blog/BlogPost';
+import Portfolio from './pages/Portfolio/Portfolio';
 import { UserProvider } from './context/UserContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -25,6 +26,7 @@ const App = () => {
                     <Route path="/blog" element={<Blog />} />
                     <Route path="/blog/:id" element={<BlogPost />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/portfolio" element={<Portfolio />} />
                 </Routes>
                 <Footer />
             </div>

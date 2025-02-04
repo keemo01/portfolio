@@ -9,17 +9,13 @@ import { Link } from 'react-router-dom';
 const Profile = () => {
     const { user, setUser } = useContext(UserContext);
     const [showEditModal, setShowEditModal] = useState(false);
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [profileData, setProfileData] = useState({
         username: '',
         email: '',
     });
-    const [passwordData, setPasswordData] = useState({
-        old_password: '',
-        new_password: '',
-    });
     const [userBlogs, setUserBlogs] = useState([]);
     const [message, setMessage] = useState('');
+    const [errors, setErrors] = useState({});
 
     useEffect(() => {
         if (user && user.token) {
@@ -56,7 +52,6 @@ const Profile = () => {
                     
                     if (response.data) {
                         console.log('Received user blogs:', response.data);
-                        // Check if response.data.blogs exists, otherwise use response.data directly
                         const blogsData = response.data.blogs || response.data;
                         setUserBlogs(blogsData);
                     }
@@ -72,6 +67,18 @@ const Profile = () => {
 
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
+        setErrors({}); // Clear previous errors
+
+        if (!profileData.username.trim()) {
+            setErrors({ username: 'Username is required' });
+            return;
+        }
+
+        if (!profileData.email.trim()) {
+            setErrors({ email: 'Email is required' });
+            return;
+        }
+
         if (user && user.token) {
             try {
                 const response = await axios.put('http://127.0.0.1:8000/api/profile/', profileData, {
@@ -81,7 +88,11 @@ const Profile = () => {
                 setMessage('Profile updated successfully!');
                 setShowEditModal(false);
             } catch (error) {
-                setMessage('Error updating profile');
+                if (error.response && error.response.data) {
+                    setErrors(error.response.data);
+                } else {
+                    setMessage('Error updating profile');
+                }
             }
         }
     };
@@ -93,8 +104,10 @@ const Profile = () => {
                 <button 
                     className="edit-profile-btn"
                     onClick={() => setShowEditModal(true)}
+                    title="Edit Profile" // Tooltip for better UX
                 >
                     <FaEdit size={20} />
+                    <span className="edit-profile-label">Edit Profile</span>
                 </button>
             </div>
 
@@ -151,6 +164,7 @@ const Profile = () => {
                                 value={profileData.username}
                                 onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
                             />
+                            {errors.username && <span className="error-message">{errors.username}</span>}
                         </div>
                         <div className="form-group">
                             <label>Email:</label>
@@ -159,6 +173,7 @@ const Profile = () => {
                                 value={profileData.email}
                                 onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
                             />
+                            {errors.email && <span className="error-message">{errors.email}</span>}
                         </div>
                         <div className="modal-actions">
                             <Button variant="secondary" onClick={() => setShowEditModal(false)}>

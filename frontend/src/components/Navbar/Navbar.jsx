@@ -5,14 +5,15 @@ import arrow from '../../assets/arrow.png'; // Import arrow image
 
 import { CoinContext } from '../../context/CoinContext'; // Import CoinContext
 import { UserContext } from '../../context/UserContext'; // Import UserContext
-import React, { useContext } from 'react'; // Import React and useContext hook
+import React, { useContext, useState } from 'react'; // Import React and useContext hook
 import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate for navigation
 import axios from 'axios'; // Import axios for API requests
-import { FaUserCircle } from 'react-icons/fa'; // Import user icon
+import { FaUserCircle, FaUser } from 'react-icons/fa'; // Import user icon
+import { Dropdown } from 'react-bootstrap';
 
 const Navbar = () => {
     const { setCurrency } = useContext(CoinContext); // Destructure setCurrency from CoinContext
-    const { user, logout } = useContext(UserContext); // Destructure user and logout from UserContext
+    const { user, logout, setUser } = useContext(UserContext); // Destructure user and logout from UserContext
     const navigate = useNavigate(); // Initialize useNavigate
 
     // Handle currency changes
@@ -53,10 +54,15 @@ const Navbar = () => {
         }
     };
 
-    // Handle profile icon click
-    const handleProfileClick = () => {
-        navigate('/profile');
-    };
+    const CustomToggle = React.forwardRef(({ children, onClick }, ref) => (
+        <div
+            ref={ref}
+            onClick={onClick}
+            className="profile-icon-wrapper"
+        >
+            <FaUser className="profile-icon" />
+        </div>
+    ));
 
     return (
         <div className='navigation-bar'>
@@ -65,8 +71,6 @@ const Navbar = () => {
             </Link>
             <ul>
                 <Link to={'/'}><li>Home</li></Link>
-                {/* Remove the profile link */}
-                {/* <Link to={'/profile'}><li>Profile</li></Link> */}
                 <li>Features</li>
                 <li>Pricing</li>
                 <li><Link to="/blog">Blog</Link></li>
@@ -80,12 +84,24 @@ const Navbar = () => {
                 {user ? ( // Show Logout and Profile Icon when logged in
                     <>
                         <span className="welcome-user">Welcome, {user.username}</span>
-                        <FaUserCircle 
-                            size={30} 
-                            onClick={handleProfileClick} 
-                            style={{ cursor: 'pointer', marginLeft: '1rem' }} 
-                        />
-                        <button onClick={handleLogout}>Logout</button>
+                        <Dropdown align="end">
+                            <Dropdown.Toggle as={CustomToggle} id="profile-dropdown">
+                                {/* Icon is rendered by CustomToggle */}
+                            </Dropdown.Toggle>
+
+                            <Dropdown.Menu className="dropdown-menu">
+                                <Dropdown.Item as={Link} to="/profile">
+                                    Profile
+                                </Dropdown.Item>
+                                <Dropdown.Item as={Link} to="/portfolio" className="nav-link">
+                                    Portfolio
+                                </Dropdown.Item>
+                                <Dropdown.Divider />
+                                <Dropdown.Item onClick={handleLogout}>
+                                    Logout
+                                </Dropdown.Item>
+                            </Dropdown.Menu>
+                        </Dropdown>
                     </>
                 ) : ( // Show Login/SignUp when not logged in
                     <>
