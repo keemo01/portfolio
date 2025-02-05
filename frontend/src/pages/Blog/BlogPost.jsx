@@ -139,7 +139,7 @@ const BlogPost = () => {
     const handleDeleteComment = async (commentId) => {
         try {
             await axios.delete(
-                `http://127.0.0.1:8000/api/comments/${commentId}/`,
+                `http://127.0.0.1:8000/api/blogs/${id}/comments/${commentId}/`,
                 { 
                     headers: { 
                         'Authorization': `Token ${user.token}` 

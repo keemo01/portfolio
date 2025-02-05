@@ -22,13 +22,6 @@ urlpatterns = [
     path('user-blogs/', user_blogs, name='user_blogs'),
     path('blogs/<int:blog_id>/comments/', blog_comments, name='blog_comments'),
     path('blogs/<int:blog_id>/comments/<int:comment_id>/', delete_comment, name='delete_comment'),
-    
-    # Public endpoints
-    path('api/blogs/<int:pk>/', blog_detail, name='blog-detail'),
-    
-    # Protected endpoints
-    path('api/blogs/<int:blog_id>/comments/', blog_comments, name='blog-comments'),
-    path('api/comments/<int:comment_id>/', delete_comment, name='delete-comment'),  # Updated URL pattern
 ]
 
 # Serve media files in development

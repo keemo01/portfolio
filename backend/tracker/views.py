@@ -267,15 +267,16 @@ def blog_comments(request, blog_id):
 @api_view(['DELETE'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def delete_comment(request, comment_id):
+def delete_comment(request, blog_id, comment_id):
     """
-    DELETE /blogs/<blog_id>/comments/<comment_id>/
-    Deletes specified comment if user is author
-    Requires: Authentication Token
-    Returns: 204 No Content on success
+    DELETE /api/blogs/<blog_id>/comments/<comment_id>/
+    Deletes a comment if the user is the author and the comment belongs to the specified blog
     """
-    comment = get_object_or_404(Comment, id=comment_id)
-    if comment.author != request.user:
-        return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
-    comment.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
+    try:
+        comment = get_object_or_404(Comment, id=comment_id, blog_id=blog_id)
+        if comment.author != request.user:
+            return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        comment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    except Comment.DoesNotExist:
+        return Response({'detail': 'Comment not found'}, status=status.HTTP_404_NOT_FOUND)
