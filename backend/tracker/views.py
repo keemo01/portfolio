@@ -14,10 +14,47 @@ from django.shortcuts import get_object_or_404
 from json.decoder import JSONDecodeError
 
 from tracker.models import Blog, BlogMedia
-from .serializers import BlogSerializer, UserSerializer
-from .models import Comment
-from .serializers import CommentSerializer
+from .serializers import BlogSerializer, CommentSerializer, UserSerializer
+from .models import Comment, PortfolioHolding, APIKey  # Add PortfolioHolding and APIKey import
+import hmac
+import hashlib
+import time
+from urllib.parse import urlencode
+import logging
 
+logger = logging.getLogger(__name__)
+
+def get_binance_price(coin_symbol):
+    """
+    Fetch the current price from Binance for coin_symbol (e.g., "BTC" returns price from BTCUSDT).
+    """
+    pair = coin_symbol.upper() + "USDT"
+    url = f"https://api.binance.com/api/v3/ticker/price?symbol={pair}"
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        return float(data.get("price", 0))
+    except Exception as e:
+        print(f"Binance error for {coin_symbol}: {e}")
+        return None
+
+def get_bybit_price(coin):
+    """
+    Fetch the current price from Bybit for coin (e.g., "BTC" returns price from BTCUSD).
+    """
+    symbol = coin.upper() + "USD"
+    url = f"https://api.bybit.com/v2/public/tickers?symbol={symbol}"
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("result"):
+            return float(data["result"][0].get("last_price", 0))
+        return None
+    except Exception as e:
+        print(f"Bybit error for {coin}: {e}")
+        return None
 
 # User Registration (Signup)
 @api_view(['POST'])
@@ -248,7 +285,7 @@ def blog_comments(request, blog_id):
     Returns: All comments for specified blog
     
     POST /blogs/<blog_id>/comments/
-    Required data: content, parent (optional for replies)
+    Required data: content, parent (optionaxl for replies)
     Returns: Created comment data
     Requires: Authentication Token
     """
@@ -280,3 +317,221 @@ def delete_comment(request, blog_id, comment_id):
         return Response(status=status.HTTP_204_NO_CONTENT)
     except Comment.DoesNotExist:
         return Response({'detail': 'Comment not found'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def add_holding(request):
+    """
+    POST /portfolio/add/
+    Expected data: { "coin": "BTC", "amount": "0.5", "purchase_price": "40000" }
+    """
+    user = request.user
+    coin = request.data.get('coin')
+    amount = request.data.get('amount')
+    purchase_price = request.data.get('purchase_price')
+    
+    if not coin or not amount or not purchase_price:
+        return Response({'detail': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    holding = PortfolioHolding.objects.create(
+        user=user,
+        coin=coin,
+        amount=amount,
+        purchase_price=purchase_price
+    )
+    return Response({'detail': 'Holding added'}, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def portfolio(request):
+    """
+    GET /portfolio/
+    Returns combined holdings from Binance and Bybit using stored API keys
+    """
+    user = request.user
+    try:
+        api_keys = APIKey.objects.get(user=user)
+        logger.info(f"Found API keys for user {user.username}")
+    except APIKey.DoesNotExist:
+        logger.warning(f"No API keys found for user {user.username}")
+        return Response({
+            'detail': 'Please add your API keys in profile settings first',
+            'has_api_keys': False
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    portfolio_data = []
+    errors = []
+
+    # Fetch Binance holdings if API keys exist
+    if api_keys.binance_api_key and api_keys.binance_secret_key:
+        try:
+            timestamp = str(int(time.time() * 1000))
+            binance_params = {
+                'timestamp': timestamp,
+                'recvWindow': '5000'
+            }
+            
+            # Generate signature for Binance
+            query_string = urlencode(binance_params, safe='*')
+            signature = hmac.new(
+                api_keys.binance_secret_key.encode('utf-8'),
+                query_string.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()
+            
+            binance_url = 'https://api.binance.com/api/v3/account'
+            headers = {
+                'X-MBX-APIKEY': api_keys.binance_api_key,
+                'Content-Type': 'application/json'
+            }
+            
+            full_url = f"{binance_url}?{query_string}&signature={signature}"
+            logger.info(f"Sending request to Binance: {full_url}")
+            
+            response = requests.get(full_url, headers=headers)
+            response.raise_for_status()
+            
+            logger.info(f"Binance response status: {response.status_code}")
+            logger.info(f"Binance response: {response.text[:200]}...")  # Log first 200 chars
+            
+            if response.status_code == 200:
+                data = response.json()
+                balances = data.get('balances', [])
+                for balance in balances:
+                    amount = float(balance['free']) + float(balance['locked'])
+                    if amount > 0:
+                        current_price = get_binance_price(balance['asset'])
+                        if current_price:
+                            portfolio_data.append({
+                                'exchange': 'Binance',
+                                'coin': balance['asset'],
+                                'amount': str(amount),
+                                'current_price': current_price,
+                                'current_value': amount * current_price
+                            })
+        except Exception as e:
+            logger.error(f"Error fetching Binance holdings: {str(e)}")
+            errors.append(f"Binance error: {str(e)}")
+
+    # Fetch Bybit holdings if API keys exist
+    if api_keys.bybit_api_key and api_keys.bybit_secret_key:
+        try:
+            timestamp = int(time.time() * 1000)
+            bybit_params = {
+                'api_key': api_keys.bybit_api_key,
+                'timestamp': timestamp,
+                'coin': ''  # Empty string to get all coins
+            }
+            
+            # Generate signature for Bybit
+            param_str = ''.join([f"{key}={bybit_params[key]}" for key in sorted(bybit_params.keys())])
+            signature = hmac.new(
+                api_keys.bybit_secret_key.encode('utf-8'),
+                param_str.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()
+            
+            bybit_params['sign'] = signature
+            bybit_url = 'https://api.bybit.com/v2/private/wallet/balance'
+            response = requests.get(bybit_url, params=bybit_params)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('result'):
+                    for coin, details in data['result'].items():
+                        amount = float(details.get('available_balance', 0))
+                        if amount > 0:
+                            current_price = get_bybit_price(coin)
+                            if current_price:
+                                portfolio_data.append({
+                                    'exchange': 'Bybit',
+                                    'coin': coin,
+                                    'amount': str(amount),
+                                    'current_price': current_price,
+                                    'current_value': amount * current_price
+                                })
+        except Exception as e:
+            print(f"Error fetching Bybit holdings: {str(e)}")
+
+    if not portfolio_data and errors:
+        return Response({
+            'detail': 'Error fetching holdings',
+            'errors': errors,
+            'portfolio': []
+        }, status=status.HTTP_200_OK)
+
+    return Response({
+        'portfolio': portfolio_data,
+        'total_value': sum(item['current_value'] for item in portfolio_data),
+        'errors': errors if errors else None
+    }, status=status.HTTP_200_OK)
+
+@api_view(['POST', 'GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def manage_api_keys(request):
+    """
+    POST: Save/update API keys
+    GET: Retrieve saved API keys (masked)
+    """
+    if request.method == 'POST':
+        try:
+            api_keys, created = APIKey.objects.get_or_create(user=request.user)
+            
+            # Only update keys if they are provided in the request
+            if 'binance_api_key' in request.data:
+                api_keys.binance_api_key = request.data['binance_api_key']
+            if 'binance_secret_key' in request.data:
+                api_keys.binance_secret_key = request.data['binance_secret_key']
+            if 'bybit_api_key' in request.data:
+                api_keys.bybit_api_key = request.data['bybit_api_key']
+            if 'bybit_secret_key' in request.data:
+                api_keys.bybit_secret_key = request.data['bybit_secret_key']
+            
+            api_keys.save()
+            logger.info(f"API keys updated for user {request.user.username}")
+            
+            # Verify the keys work by making a test request
+            try:
+                # Test Binance keys
+                if api_keys.binance_api_key and api_keys.binance_secret_key:
+                    timestamp = str(int(time.time() * 1000))
+                    params = {'timestamp': timestamp}
+                    signature = hmac.new(
+                        api_keys.binance_secret_key.encode('utf-8'),
+                        urlencode(params).encode('utf-8'),
+                        hashlib.sha256
+                    ).hexdigest()
+                    
+                    response = requests.get(
+                        'https://api.binance.com/api/v3/account',
+                        params={**params, 'signature': signature},
+                        headers={'X-MBX-APIKEY': api_keys.binance_api_key}
+                    )
+                    response.raise_for_status()
+            except Exception as e:
+                logger.error(f"Error testing API keys: {str(e)}")
+                return Response({
+                    'detail': 'API keys saved but test request failed. Please verify your keys.',
+                    'error': str(e)
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            return Response({'detail': 'API keys updated and verified successfully'}, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Error saving API keys: {str(e)}")
+            return Response({'detail': f'Error saving API keys: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'GET':
+        try:
+            api_keys = APIKey.objects.get(user=request.user)
+            return Response({
+                'binance_api_key': '*' * 8 + api_keys.binance_api_key[-4:] if api_keys.binance_api_key else None,
+                'bybit_api_key': '*' * 8 + api_keys.bybit_api_key[-4:] if api_keys.bybit_api_key else None,
+                'has_api_keys': bool(api_keys.binance_api_key or api_keys.bybit_api_key)
+            })
+        except APIKey.DoesNotExist:
+            return Response({'has_api_keys': False})
+

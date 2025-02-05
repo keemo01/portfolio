@@ -7,6 +7,7 @@ import SignUp from './pages/Signup/Signup';
 import Footer from './components/Footer/Footer';
 import Login from './pages/Login/Login';
 import Blog from './pages/Blog/Blog';
+import CryptoNews from './pages/News/CryptoNews';
 import Profile from './pages/Profile/Profile';
 import BlogPost from './pages/Blog/BlogPost';
 import Portfolio from './pages/Portfolio/Portfolio';
@@ -27,6 +28,7 @@ const App = () => {
                     <Route path="/blog/:id" element={<BlogPost />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/portfolio" element={<Portfolio />} />
+                    <Route path="/news" element={<CryptoNews />} />
                 </Routes>
                 <Footer />
             </div>

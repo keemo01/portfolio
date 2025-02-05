@@ -1,72 +1,112 @@
-import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import React, { useEffect, useState, useContext } from 'react';
+import axios from 'axios';
+import { UserContext } from '../../context/UserContext';
+import { Container, Card, Row, Col, Alert } from 'react-bootstrap';
+import { useNavigate, Link } from 'react-router-dom';
 import './Portfolio.css';
 
 const Portfolio = () => {
+  const { user } = useContext(UserContext);
+  const navigate = useNavigate();
+  const [portfolioData, setPortfolioData] = useState([]);
+  const [totalValue, setTotalValue] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchPortfolio = async () => {
+      if (!user?.token) {
+        navigate('/login');
+        return;
+      }
+
+      try {
+        console.log('Fetching portfolio data...');
+        const response = await axios.get('http://127.0.0.1:8000/api/portfolio/', {
+          headers: { 'Authorization': `Token ${user.token}` }
+        });
+        
+        console.log('Portfolio response:', response.data);
+        
+        if (response.data.portfolio) {
+          setPortfolioData(response.data.portfolio);
+          setTotalValue(response.data.total_value || 0);
+        }
+        setError(null);
+      } catch (error) {
+        console.error('Portfolio error:', error.response || error);
+        if (error.response?.status === 400 && error.response?.data?.detail?.includes('API keys')) {
+          setError('Please add your exchange API keys in your profile settings');
+        } else {
+          setError('Failed to load portfolio data');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPortfolio();
+  }, [user, navigate]);
+
+  if (!user) return null;
+
   return (
-    <div className="portfolio-container">
-      {/* Hero Section */}
-      <section className="hero-section">
-        <h1>Akeem</h1>
-        <p>Full Stack Developer | Designer | Creative Thinker</p>
-      </section>
-
-      {/* About Section */}
-      <section className="about-section">
-        <Container>
-          <h2>About Me</h2>
-          <p>
-            [I am the strongest of em all.]
-          </p>
-        </Container>
-      </section>
-
-      {/* Skills Section */}
-      <section className="skills-section">
-        <Container>
-          <h2>Skills</h2>
-          <div className="skills-grid">
-            <div className="skill-item">Frontend Development</div>
-            <div className="skill-item">Backend Development</div>
-            <div className="skill-item">UI/UX Design</div>
-            <div className="skill-item">Database Management</div>
+    <Container className="portfolio-container py-4">
+      <h1 className="mb-4">Cryptocurrency Portfolio</h1>
+      
+      {loading ? (
+        <Alert variant="info">Loading your portfolio...</Alert>
+      ) : error ? (
+        <Alert variant="warning">
+          {error}
+          <div className="mt-3">
+            <Link to="/profile" className="btn btn-primary">
+              Manage API Keys
+            </Link>
           </div>
-        </Container>
-      </section>
+        </Alert>
+      ) : portfolioData.length === 0 ? (
+        <Alert variant="info">
+          <h4>No holdings found</h4>
+          <p>Make sure you have:</p>
+          <ul>
+            <li>Added your exchange API keys in your profile</li>
+            <li>Have cryptocurrency holdings in your exchange accounts</li>
+          </ul>
+          <Link to="/profile" className="btn btn-primary mt-2">
+            Manage API Keys
+          </Link>
+        </Alert>
+      ) : (
+        <>
+          <Card className="mb-4">
+            <Card.Body>
+              <h3>Total Portfolio Value: ${totalValue.toFixed(2)}</h3>
+            </Card.Body>
+          </Card>
 
-      {/* Projects Section */}
-      <section className="projects-section">
-        <Container>
-          <h2>Projects</h2>
           <Row>
-            {[1, 2, 3].map((project) => (
-              <Col key={project} md={4} className="mb-4">
-                <div className="project-card">
-                  <div className="project-image">
-                    [Project Image Placeholder]
-                  </div>
-                  <h3>Project Title {project}</h3>
-                  <p>This project.</p>
-                  <button className="view-project-btn">View Project</button>
-                </div>
+            {portfolioData.map((holding, index) => (
+              <Col key={index} md={6} lg={4} className="mb-4">
+                <Card className="holding-card h-100">
+                  <Card.Header className="d-flex justify-content-between align-items-center">
+                    <h5 className="mb-0">{holding.coin}</h5>
+                    <span className="badge bg-primary">{holding.exchange}</span>
+                  </Card.Header>
+                  <Card.Body>
+                    <div className="holding-details">
+                      <p><strong>Amount:</strong> {holding.amount}</p>
+                      <p><strong>Current Price:</strong> ${Number(holding.current_price).toFixed(2)}</p>
+                      <p><strong>Current Value:</strong> ${Number(holding.current_value).toFixed(2)}</p>
+                    </div>
+                  </Card.Body>
+                </Card>
               </Col>
             ))}
           </Row>
-        </Container>
-      </section>
-
-      {/* Contact Section */}
-      <section className="contact-section">
-        <Container>
-          <h2>Get In Touch</h2>
-          <div className="contact-info">
-            <p>Email: joko@gmail.com</p>
-            <p>LinkedIn: ajoko</p>
-            <p>GitHub: keemo</p>
-          </div>
-        </Container>
-      </section>
-    </div>
+        </>
+      )}
+    </Container>
   );
 };
 

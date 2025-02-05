@@ -5,6 +5,8 @@
     margin: 0 auto;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: #333;
+    min-height: calc(100vh - 160px);
+    padding: 20px;
 }
 
 /* Hero Section */
@@ -161,6 +163,38 @@
     font-size: 1rem;
     color: #666;
     margin-bottom: 0.5rem;
+}
+
+.holding-card {
+    transition: transform 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.holding-card:hover {
+    transform: translateY(-5px);
+}
+
+.holding-details {
+    font-size: 1.1rem;
+}
+
+.holding-details p {
+    margin-bottom: 0.5rem;
+}
+
+.badge {
+    font-size: 0.8rem;
+    padding: 0.4em 0.8em;
+}
+
+.alert a {
+    text-decoration: none;
+}
+
+.total-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #28a745;
 }
 
 /* Responsive Design */

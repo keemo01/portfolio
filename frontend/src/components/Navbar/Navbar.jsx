@@ -73,7 +73,12 @@ const Navbar = () => {
                 <Link to={'/'}><li>Home</li></Link>
                 <li>Features</li>
                 <li>Pricing</li>
-                <li><Link to="/blog">Blog</Link></li>
+                {user && (
+                    <>
+                        <li><Link to="/blog">Blog</Link></li>
+                        <li><Link to="/news">News</Link></li>
+                    </>
+                )}
             </ul>
             <div className='nav-actions'>
                 <select onChange={currencyHandler}>

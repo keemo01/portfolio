@@ -16,6 +16,18 @@ const Profile = () => {
     const [userBlogs, setUserBlogs] = useState([]);
     const [message, setMessage] = useState('');
     const [errors, setErrors] = useState({});
+    const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+    const [apiKeys, setApiKeys] = useState({
+        binance_api_key: '',
+        binance_secret_key: '',
+        bybit_api_key: '',
+        bybit_secret_key: ''
+    });
+    const [apiKeyStatus, setApiKeyStatus] = useState({
+        hasBinanceKeys: false,
+        hasBybitKeys: false,
+        loading: true
+    });
 
     useEffect(() => {
         if (user && user.token) {
@@ -65,6 +77,29 @@ const Profile = () => {
         fetchUserBlogs();
     }, [user]);
 
+    const fetchApiKeys = async () => {
+        try {
+            const response = await axios.get('http://127.0.0.1:8000/api/profile/api-keys/', {
+                headers: { Authorization: `Token ${user.token}` }
+            });
+            const { has_api_keys, binance_api_key, bybit_api_key } = response.data;
+            setApiKeyStatus({
+                hasBinanceKeys: !!binance_api_key,
+                hasBybitKeys: !!bybit_api_key,
+                loading: false
+            });
+        } catch (error) {
+            console.error('Error fetching API keys:', error);
+            setApiKeyStatus(prev => ({ ...prev, loading: false }));
+        }
+    };
+
+    useEffect(() => {
+        if (user?.token) {
+            fetchApiKeys();
+        }
+    }, [user]);
+
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
         setErrors({}); // Clear previous errors
@@ -94,6 +129,33 @@ const Profile = () => {
                     setMessage('Error updating profile');
                 }
             }
+        }
+    };
+
+    const handleApiKeySubmit = async (e) => {
+        e.preventDefault();
+        setErrors({});
+        
+        try {
+            await axios.post('http://127.0.0.1:8000/api/profile/api-keys/', apiKeys, {
+                headers: { Authorization: `Token ${user.token}` }
+            });
+            
+            setMessage('API keys saved successfully!');
+            setShowApiKeyModal(false);
+            // Refresh API key status
+            fetchApiKeys();
+            
+            // Clear sensitive data from state
+            setApiKeys({
+                binance_api_key: '',
+                binance_secret_key: '',
+                bybit_api_key: '',
+                bybit_secret_key: ''
+            });
+        } catch (error) {
+            console.error('Error saving API keys:', error);
+            setErrors({ apiKeys: 'Failed to save API keys. Please try again.' });
         }
     };
 
@@ -150,6 +212,27 @@ const Profile = () => {
                 </div>
             </div>
 
+            {/* Add API Key Management Button */}
+            <div className="api-key-section mt-4">
+                <h3>Exchange API Keys</h3>
+                <div className="api-key-status mb-3">
+                    {apiKeyStatus.loading ? (
+                        <p>Loading API key status...</p>
+                    ) : (
+                        <>
+                            <p>Binance API Keys: {apiKeyStatus.hasBinanceKeys ? '✅ Connected' : '❌ Not Connected'}</p>
+                            <p>Bybit API Keys: {apiKeyStatus.hasBybitKeys ? '✅ Connected' : '❌ Not Connected'}</p>
+                        </>
+                    )}
+                </div>
+                <button 
+                    className="manage-api-keys-btn btn btn-primary"
+                    onClick={() => setShowApiKeyModal(true)}
+                >
+                    Manage API Keys
+                </button>
+            </div>
+
             {/* Edit Profile Modal */}
             <Modal show={showEditModal} onHide={() => setShowEditModal(false)} size="sm">
                 <Modal.Header closeButton>
@@ -187,7 +270,95 @@ const Profile = () => {
                 </Modal.Body>
             </Modal>
 
-            {message && <div className="message">{message}</div>}
+            {/* API Keys Modal */}
+            <Modal show={showApiKeyModal} onHide={() => setShowApiKeyModal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Manage Exchange API Keys</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <form onSubmit={handleApiKeySubmit}>
+                        <div className="exchange-section mb-4">
+                            <h4>Binance {apiKeyStatus.hasBinanceKeys && <span className="text-success">(Connected)</span>}</h4>
+                            <div className="form-group mb-3">
+                                <label>API Key:</label>
+                                <input
+                                    type="password"
+                                    className="form-control"
+                                    value={apiKeys.binance_api_key}
+                                    onChange={(e) => setApiKeys({
+                                        ...apiKeys,
+                                        binance_api_key: e.target.value
+                                    })}
+                                    placeholder={apiKeyStatus.hasBinanceKeys ? "••••••••" : "Enter Binance API Key"}
+                                />
+                            </div>
+                            <div className="form-group mb-3">
+                                <label>Secret Key:</label>
+                                <input
+                                    type="password"
+                                    className="form-control"
+                                    value={apiKeys.binance_secret_key}
+                                    onChange={(e) => setApiKeys({
+                                        ...apiKeys,
+                                        binance_secret_key: e.target.value
+                                    })}
+                                    placeholder={apiKeyStatus.hasBinanceKeys ? "••••••••" : "Enter Binance Secret Key"}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Repeat similar structure for Bybit */}
+                        <div className="exchange-section mb-4">
+                            <h4>Bybit {apiKeyStatus.hasBybitKeys && <span className="text-success">(Connected)</span>}</h4>
+                            <div className="form-group mb-3">
+                                <label>API Key:</label>
+                                <input
+                                    type="password"
+                                    className="form-control"
+                                    value={apiKeys.bybit_api_key}
+                                    onChange={(e) => setApiKeys({
+                                        ...apiKeys,
+                                        bybit_api_key: e.target.value
+                                    })}
+                                    placeholder={apiKeyStatus.hasBybitKeys ? "••••••••" : "Enter Bybit API Key"}
+                                />
+                            </div>
+                            <div className="form-group mb-3">
+                                <label>Secret Key:</label>
+                                <input
+                                    type="password"
+                                    className="form-control"
+                                    value={apiKeys.bybit_secret_key}
+                                    onChange={(e) => setApiKeys({
+                                        ...apiKeys,
+                                        bybit_secret_key: e.target.value
+                                    })}
+                                    placeholder={apiKeyStatus.hasBybitKeys ? "••••••••" : "Enter Bybit Secret Key"}
+                                />
+                            </div>
+                        </div>
+
+                        {errors.apiKeys && (
+                            <div className="alert alert-danger">{errors.apiKeys}</div>
+                        )}
+
+                        <div className="modal-actions">
+                            <Button variant="secondary" onClick={() => setShowApiKeyModal(false)}>
+                                Cancel
+                            </Button>
+                            <Button variant="primary" type="submit">
+                                Save API Keys
+                            </Button>
+                        </div>
+                    </form>
+                </Modal.Body>
+            </Modal>
+
+            {message && (
+                <div className="alert alert-success position-fixed bottom-0 end-0 m-3">
+                    {message}
+                </div>
+            )}
         </div>
     );
 };

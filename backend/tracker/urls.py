@@ -1,4 +1,3 @@
-# tracker/urls.py
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
@@ -6,7 +5,11 @@ from .views import (
     change_password, signup, login, logout, 
     get_blogs, create_blog, delete_blog, 
     blog_detail, user_profile, user_blogs,
-    blog_comments, delete_comment
+    blog_comments, delete_comment,
+    test_token,
+    add_holding,
+    portfolio,
+    manage_api_keys,
 )
 
 urlpatterns = [
@@ -22,6 +25,10 @@ urlpatterns = [
     path('user-blogs/', user_blogs, name='user_blogs'),
     path('blogs/<int:blog_id>/comments/', blog_comments, name='blog_comments'),
     path('blogs/<int:blog_id>/comments/<int:comment_id>/', delete_comment, name='delete_comment'),
+    path('test-token/', test_token, name='test_token'), 
+    path('portfolio/', portfolio, name='portfolio'),
+    path('portfolio/add/', add_holding, name='add_holding'),
+    path('profile/api-keys/', manage_api_keys, name='manage_api_keys'),
 ]
 
 # Serve media files in development

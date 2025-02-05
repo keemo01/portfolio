@@ -17,6 +17,20 @@ const UserProvider = ({ children }) => {
   });
   const [loading, setLoading] = useState(true);
 
+  // Add axios interceptor to include token in requests
+  axios.interceptors.request.use(
+    (config) => {
+      const userToken = localStorage.getItem('token');
+      if (userToken) {
+        config.headers.Authorization = `Token ${userToken}`;
+      }
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
+    }
+  );
+
   useEffect(() => {
     // Function to verify the token and fetch user data
     const verifyToken = async () => {
