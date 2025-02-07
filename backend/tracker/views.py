@@ -41,20 +41,103 @@ def get_binance_price(coin_symbol):
 
 def get_bybit_price(coin):
     """
-    Fetch the current price from Bybit for coin (e.g., "BTC" returns price from BTCUSD).
+    Fetch the current price from Bybit V5 API
     """
-    symbol = coin.upper() + "USD"
-    url = f"https://api.bybit.com/v2/public/tickers?symbol={symbol}"
+    # USDT price is always 1 USD
+    if coin.upper() == 'USDT':
+        return 1.0
+
+    # Use V5 market endpoint for other coins
+    url = "https://api.bybit.com/v5/market/tickers"
+    params = {
+        "category": "spot",
+        "symbol": f"{coin}USDT"  # Format: BTCUSDT, ETHUSDT, etc.
+    }
+
     try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()
-        data = response.json()
-        if data.get("result"):
-            return float(data["result"][0].get("last_price", 0))
+        print(f"Fetching Bybit price for {coin} with params: {params}")
+        response = requests.get(url, params=params, timeout=5)
+        print(f"Bybit price response: {response.text}")
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("retCode") == 0 and data.get("result", {}).get("list"):
+                price = float(data["result"]["list"][0]["lastPrice"])
+                print(f"Found price for {coin}: ${price}")
+                return price
+            print(f"No price data found for {coin}")
         return None
     except Exception as e:
-        print(f"Bybit error for {coin}: {e}")
+        print(f"Error fetching Bybit price for {coin}: {e}")
         return None
+
+def get_bybit_holdings(api_key, secret_key):
+    """
+    Fetch holdings from Bybit V5 API
+    """
+    url = "https://api.bybit.com/v5/asset/transfer/query-account-coins-balance"
+    timestamp = str(int(time.time() * 1000))
+    recv_window = "5000"
+    
+    # Split coins into batches of 10 (Bybit's limit)
+    all_coins = [
+        "USDT", "BTC", "ETH", "SOL", "XRP", "MATIC", "DOGE", "ADA", "DOT", "AVAX",
+        "LINK", "UNI", "SHIB", "LTC", "ATOM", "BCH", "NEAR", "APE", "FTM", "HBAR",
+        "TRX", "OP", "ARB", "FLOW", "SAND", "MANA", "GALA", "IMX", "LDO", "RNDR",
+        "SEI", "STX", "TIA", "AAVE", "ALGO", "AXS", "BABYDOGE", "BAND", "BAT", "BIT",
+        "BTT", "CELR", "CHZ", "COMP", "CRO", "CRV", "DASH", "DYDX", "EGLD", "ENJ",
+        "FIL", "FLOW", "GRT", "ICP", "ICX", "JASMY", "KAVA", "KLAY", "KSM", "LRC",
+        "MINA", "MKR", "NANO", "OMG", "ONT", "OCEAN", "QTUM", "RAY", "REEF", "ROSE",
+        "SNX", "STORJ", "SRM", "TFUEL", "THETA", "TON", "TWT", "VET", "XLM", "XEM",
+        "XEC", "ZEC", "ZIL", "BLUR", "PEPE", "ORDI", "WLD", "SUI", "INJ", "CYBER",
+        "BONK", "PYTH", "CFX", "AGIX", "JUP", "GMX", "1INCH", "CAKE", "DENT", "ENS"
+    ]
+    
+    all_balances = []
+    
+    # Process coins in batches of 10
+    for i in range(0, len(all_coins), 10):
+        coin_batch = all_coins[i:i + 10]
+        params = {
+            "accountType": "UNIFIED",
+            "coin": ",".join(coin_batch)
+        }
+        
+        # Create signature
+        param_str = timestamp + api_key + recv_window + urlencode(sorted(params.items()))
+        signature = hmac.new(
+            bytes(secret_key, 'utf-8'),
+            param_str.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        
+        headers = {
+            'X-BAPI-API-KEY': api_key,
+            'X-BAPI-SIGN': signature,
+            'X-BAPI-TIMESTAMP': timestamp,
+            'X-BAPI-RECV-WINDOW': recv_window
+        }
+
+        try:
+            response = requests.get(url, headers=headers, params=params)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('retCode') == 0:
+                    balance_data = data.get('result', {}).get('balance', [])
+                    for coin_data in balance_data:
+                        wallet_balance = float(coin_data.get('walletBalance', '0'))
+                        if wallet_balance > 0:
+                            all_balances.append({
+                                'coin': coin_data['coin'],
+                                'amount': wallet_balance,
+                                'transferable': float(coin_data.get('transferBalance', '0'))
+                            })
+                            print(f"Found balance for {coin_data['coin']}: {wallet_balance}")
+        except Exception as e:
+            print(f"Error fetching batch {i//10 + 1}: {e}")
+            continue
+
+    return all_balances
 
 # User Registration (Signup)
 @api_view(['POST'])
@@ -342,20 +425,15 @@ def add_holding(request):
     )
     return Response({'detail': 'Holding added'}, status=status.HTTP_201_CREATED)
 
-@api_view(['GET'])
+@api_view(['POST', 'GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def portfolio(request):
-    """
-    GET /portfolio/
-    Returns combined holdings from Binance and Bybit using stored API keys
-    """
     user = request.user
     try:
         api_keys = APIKey.objects.get(user=user)
-        logger.info(f"Found API keys for user {user.username}")
+        print(f"Found API keys for {user.username}")
     except APIKey.DoesNotExist:
-        logger.warning(f"No API keys found for user {user.username}")
         return Response({
             'detail': 'Please add your API keys in profile settings first',
             'has_api_keys': False
@@ -363,6 +441,33 @@ def portfolio(request):
 
     portfolio_data = []
     errors = []
+
+    # Fetch Bybit holdings
+    if api_keys.bybit_api_key and api_keys.bybit_secret_key:
+        try:
+            holdings = get_bybit_holdings(api_keys.bybit_api_key, api_keys.bybit_secret_key)
+            if holdings:
+                for holding in holdings:
+                    coin = holding['coin']
+                    amount = float(holding['amount'])
+                    
+                    # Get current price (handle USDT specially)
+                    current_price = get_bybit_price(coin)
+                    if current_price is not None:
+                        value = amount * current_price
+                        portfolio_data.append({
+                            'exchange': 'Bybit',
+                            'coin': coin,
+                            'amount': str(amount),
+                            'current_price': current_price,
+                            'current_value': value,
+                            'transferable': str(holding['transferable'])
+                        })
+                        print(f"Added {coin} to portfolio: {amount} @ ${current_price} = ${value}")
+        except Exception as e:
+            error_msg = f"Error fetching Bybit holdings: {str(e)}"
+            print(error_msg)
+            errors.append(error_msg)
 
     # Fetch Binance holdings if API keys exist
     if api_keys.binance_api_key and api_keys.binance_secret_key:
@@ -414,46 +519,6 @@ def portfolio(request):
         except Exception as e:
             logger.error(f"Error fetching Binance holdings: {str(e)}")
             errors.append(f"Binance error: {str(e)}")
-
-    # Fetch Bybit holdings if API keys exist
-    if api_keys.bybit_api_key and api_keys.bybit_secret_key:
-        try:
-            timestamp = int(time.time() * 1000)
-            bybit_params = {
-                'api_key': api_keys.bybit_api_key,
-                'timestamp': timestamp,
-                'coin': ''  # Empty string to get all coins
-            }
-            
-            # Generate signature for Bybit
-            param_str = ''.join([f"{key}={bybit_params[key]}" for key in sorted(bybit_params.keys())])
-            signature = hmac.new(
-                api_keys.bybit_secret_key.encode('utf-8'),
-                param_str.encode('utf-8'),
-                hashlib.sha256
-            ).hexdigest()
-            
-            bybit_params['sign'] = signature
-            bybit_url = 'https://api.bybit.com/v2/private/wallet/balance'
-            response = requests.get(bybit_url, params=bybit_params)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('result'):
-                    for coin, details in data['result'].items():
-                        amount = float(details.get('available_balance', 0))
-                        if amount > 0:
-                            current_price = get_bybit_price(coin)
-                            if current_price:
-                                portfolio_data.append({
-                                    'exchange': 'Bybit',
-                                    'coin': coin,
-                                    'amount': str(amount),
-                                    'current_price': current_price,
-                                    'current_value': amount * current_price
-                                })
-        except Exception as e:
-            print(f"Error fetching Bybit holdings: {str(e)}")
 
     if not portfolio_data and errors:
         return Response({
@@ -534,4 +599,3 @@ def manage_api_keys(request):
             })
         except APIKey.DoesNotExist:
             return Response({'has_api_keys': False})
-

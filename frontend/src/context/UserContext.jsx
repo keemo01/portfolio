@@ -1,6 +1,8 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
+const BASE_URL = 'http://127.0.0.1:8000/api';  // Add this constant
+
 // Create a context with default values
 const UserContext = createContext({
   user: null,
@@ -41,8 +43,11 @@ const UserProvider = ({ children }) => {
       }
       
       try {
-        const response = await axios.get('http://127.0.0.1:8000/api/test_token/', {
-          headers: { Authorization: `Token ${token}` }
+        const response = await axios.get(`${BASE_URL}/test-token/`, {
+          headers: { 
+            Authorization: `Token ${token}`,
+            'Content-Type': 'application/json'
+          }
         });
         
         if (response?.data?.user) {
@@ -54,6 +59,7 @@ const UserProvider = ({ children }) => {
           });
         }
       } catch (error) {
+        console.error('Token verification error:', error.response || error);
         // Remove invalid token and reset user data
         localStorage.removeItem('token');
         setUser(null);

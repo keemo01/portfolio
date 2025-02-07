@@ -137,25 +137,31 @@ const Profile = () => {
         setErrors({});
         
         try {
-            await axios.post('http://127.0.0.1:8000/api/profile/api-keys/', apiKeys, {
-                headers: { Authorization: `Token ${user.token}` }
-            });
+            console.log('Submitting API keys...');
+            const response = await axios.post(
+                'http://127.0.0.1:8000/api/profile/api-keys/',
+                {
+                    bybit_api_key: apiKeys.bybit_api_key,
+                    bybit_secret_key: apiKeys.bybit_secret_key
+                },
+                {
+                    headers: {
+                        'Authorization': `Token ${user.token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
             
+            console.log('API key response:', response.data);
             setMessage('API keys saved successfully!');
             setShowApiKeyModal(false);
-            // Refresh API key status
-            fetchApiKeys();
-            
-            // Clear sensitive data from state
-            setApiKeys({
-                binance_api_key: '',
-                binance_secret_key: '',
-                bybit_api_key: '',
-                bybit_secret_key: ''
-            });
+            await fetchApiKeys();  // Refresh API key status
         } catch (error) {
-            console.error('Error saving API keys:', error);
-            setErrors({ apiKeys: 'Failed to save API keys. Please try again.' });
+            console.error('Full error:', error);
+            console.error('Error response:', error.response?.data);
+            setErrors({
+                apiKeys: error.response?.data?.detail || 'Failed to save API keys. Please check your keys and try again.'
+            });
         }
     };
 

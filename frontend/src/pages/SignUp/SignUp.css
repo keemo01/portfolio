@@ -63,3 +63,23 @@
   font-size: 14px;
   margin-top: 10px;
 }
+
+/* Bear container and image styling */
+.bear-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.bear-image {
+  width: 150px; /* Adjust the size as needed */
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+/* Update error message styling */
+.signup p.error {
+  text-align: center;
+  color: #ff4d4d;
+  font-size: 14px;
+  margin-top: 10px;
+}

@@ -21,25 +21,39 @@ const Portfolio = () => {
       }
 
       try {
-        console.log('Fetching portfolio data...');
+        setLoading(true);
+        console.log('Fetching portfolio with token:', user.token);
         const response = await axios.get('http://127.0.0.1:8000/api/portfolio/', {
-          headers: { 'Authorization': `Token ${user.token}` }
+          headers: { 
+            'Authorization': `Token ${user.token}`,
+            'Content-Type': 'application/json'
+          }
         });
         
         console.log('Portfolio response:', response.data);
         
         if (response.data.portfolio) {
-          setPortfolioData(response.data.portfolio);
+          // Sort holdings by value
+          const sortedHoldings = response.data.portfolio
+            .sort((a, b) => parseFloat(b.current_value) - parseFloat(a.current_value))
+            .map(holding => ({
+              ...holding,
+              current_value: parseFloat(holding.current_value).toFixed(2),
+              current_price: parseFloat(holding.current_price).toFixed(2)
+            }));
+            
+          setPortfolioData(sortedHoldings);
           setTotalValue(response.data.total_value || 0);
+          setError(null);
         }
-        setError(null);
+        
+        if (response.data.errors?.length > 0) {
+          console.error('Portfolio errors:', response.data.errors);
+          setError(response.data.errors.join('. '));
+        }
       } catch (error) {
-        console.error('Portfolio error:', error.response || error);
-        if (error.response?.status === 400 && error.response?.data?.detail?.includes('API keys')) {
-          setError('Please add your exchange API keys in your profile settings');
-        } else {
-          setError('Failed to load portfolio data');
-        }
+        console.error('Portfolio error:', error.response?.data || error);
+        handlePortfolioError(error);
       } finally {
         setLoading(false);
       }
@@ -47,6 +61,16 @@ const Portfolio = () => {
 
     fetchPortfolio();
   }, [user, navigate]);
+
+  const handlePortfolioError = (error) => {
+    if (error.response?.status === 400 && error.response?.data?.detail?.includes('API keys')) {
+      setError('Please add your exchange API keys in your profile settings');
+    } else if (error.response?.data?.errors) {
+      setError(error.response.data.errors.join('. '));
+    } else {
+      setError('Failed to load portfolio data. Please try again later.');
+    }
+  };
 
   if (!user) return null;
 

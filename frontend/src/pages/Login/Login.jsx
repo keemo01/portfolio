@@ -1,56 +1,46 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserContext } from '../../context/UserContext';
+import axios from 'axios';
 import './Login.css';
 
 const Login = () => {
-    // State variables for username, password, and error message
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    
-    // Hook to navigate programmatically
-    const navigate = useNavigate();
-    
-    // Access setUser from UserContext to update user state
     const { setUser } = useContext(UserContext);
+    const navigate = useNavigate();
 
-    // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const userData = { username, password };
-
         try {
-            // Send login request to the server
-            const response = await fetch('http://127.0.0.1:8000/api/login/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(userData),
+            console.log('Attempting login...');
+            const response = await axios.post('http://127.0.0.1:8000/api/login/', {
+                username,
+                password
             });
-            const data = await response.json();
-
-            if (response.ok) {
-                // Store token in local storage
-                localStorage.setItem('token', data.token);
-                
-                // Update user state with the received data
-                setUser({ username: data.user.username, email: data.user.email, token: data.token });
-                
-                // Redirect to home page
+            
+            console.log('Login response:', response.data);
+            
+            if (response.data.token) {
+                localStorage.setItem('token', response.data.token);
+                setUser({
+                    token: response.data.token,
+                    username: response.data.user.username,
+                    email: response.data.user.email
+                });
                 navigate('/');
-            } else {
-                // Set error message if login fails
-                setError(data.detail || 'Invalid credentials');
             }
         } catch (err) {
-            console.error('Login failed:', err);
-            setError('Failed to log in');
+            console.error('Login error:', err.response?.data || err);
+            setError(err.response?.data?.detail || 'Login failed');
         }
     };
 
     return (
         <div className="login">
             <h2>Login</h2>
+            {error && <div className="error-message">{error}</div>}
             <form onSubmit={handleSubmit}>
                 <input
                     type="text"
@@ -68,7 +58,6 @@ const Login = () => {
                 />
                 <button type="submit">Login</button>
             </form>
-            {error && <p>{error}</p>}
         </div>
     );
 };
