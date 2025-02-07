@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import { UserContext } from '../../context/UserContext';
-import { Container, Card, Row, Col, Alert } from 'react-bootstrap';
+import { Container, Card, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
+import { FaCoins, FaExchangeAlt, FaChartLine, FaWallet } from 'react-icons/fa';
 import './Portfolio.css';
 
 const Portfolio = () => {
@@ -72,63 +73,103 @@ const Portfolio = () => {
     }
   };
 
+  const getCoinIcon = (symbol) => {
+    return `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`;
+  };
+
+  const formatNumber = (num, decimals = 2) => {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: decimals,
+    }).format(num);
+  };
+
   if (!user) return null;
 
   return (
-    <Container className="portfolio-container py-4">
-      <h1 className="mb-4">Cryptocurrency Portfolio</h1>
-      
+    <Container fluid className="portfolio-container">
+      <div className="portfolio-header">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h1><FaWallet className="me-2" />Crypto Portfolio</h1>
+          {!loading && !error && portfolioData.length > 0 && (
+            <Card className="total-value-card">
+              <Card.Body>
+                <h3 className="mb-0">Total Value: ${formatNumber(totalValue)}</h3>
+              </Card.Body>
+            </Card>
+          )}
+        </div>
+      </div>
+
       {loading ? (
-        <Alert variant="info">Loading your portfolio...</Alert>
+        <div className="loading-container">
+          <Spinner animation="border" variant="primary" />
+          <p>Loading your portfolio...</p>
+        </div>
       ) : error ? (
-        <Alert variant="warning">
-          {error}
-          <div className="mt-3">
-            <Link to="/profile" className="btn btn-primary">
-              Manage API Keys
-            </Link>
-          </div>
-        </Alert>
-      ) : portfolioData.length === 0 ? (
-        <Alert variant="info">
-          <h4>No holdings found</h4>
-          <p>Make sure you have:</p>
-          <ul>
-            <li>Added your exchange API keys in your profile</li>
-            <li>Have cryptocurrency holdings in your exchange accounts</li>
-          </ul>
+        <Alert variant="warning" className="custom-alert">
+          <Alert.Heading><FaExchangeAlt className="me-2" />API Connection Required</Alert.Heading>
+          <p>{error}</p>
           <Link to="/profile" className="btn btn-primary mt-2">
-            Manage API Keys
+            Connect Exchange
           </Link>
         </Alert>
+      ) : portfolioData.length === 0 ? (
+        <div className="empty-portfolio">
+          <FaCoins size={50} className="mb-3" />
+          <h3>No Holdings Found</h3>
+          <p>Time to start your crypto journey!</p>
+          <Link to="/profile" className="btn btn-primary mt-2">
+            Add Exchange API Keys
+          </Link>
+        </div>
       ) : (
-        <>
-          <Card className="mb-4">
-            <Card.Body>
-              <h3>Total Portfolio Value: ${totalValue.toFixed(2)}</h3>
-            </Card.Body>
-          </Card>
-
-          <Row>
-            {portfolioData.map((holding, index) => (
-              <Col key={index} md={6} lg={4} className="mb-4">
-                <Card className="holding-card h-100">
-                  <Card.Header className="d-flex justify-content-between align-items-center">
-                    <h5 className="mb-0">{holding.coin}</h5>
-                    <span className="badge bg-primary">{holding.exchange}</span>
-                  </Card.Header>
-                  <Card.Body>
-                    <div className="holding-details">
-                      <p><strong>Amount:</strong> {holding.amount}</p>
-                      <p><strong>Current Price:</strong> ${Number(holding.current_price).toFixed(2)}</p>
-                      <p><strong>Current Value:</strong> ${Number(holding.current_value).toFixed(2)}</p>
+        <Row>
+          {portfolioData.map((holding, index) => (
+            <Col key={index} xs={12} md={6} lg={4} xl={3} className="mb-4">
+              <Card className="asset-card">
+                <div className="asset-card-header">
+                  <img
+                    src={getCoinIcon(holding.coin)}
+                    alt={holding.coin}
+                    className="coin-icon"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = `https://via.placeholder.com/32/6c757d/FFFFFF?text=${holding.coin.charAt(0)}`;
+                    }}
+                  />
+                  <div className="asset-card-title">
+                    <h4>{holding.coin}</h4>
+                    <span className="exchange-badge">{holding.exchange}</span>
+                  </div>
+                </div>
+                
+                <Card.Body>
+                  <div className="asset-details">
+                    <div className="detail-row">
+                      <span>Amount</span>
+                      <span className="value">{formatNumber(parseFloat(holding.amount), 8)}</span>
                     </div>
-                  </Card.Body>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        </>
+                    <div className="detail-row">
+                      <span>Price</span>
+                      <span className="value">${formatNumber(holding.current_price)}</span>
+                    </div>
+                    <div className="detail-row total-value">
+                      <span>Value</span>
+                      <span className="value">${formatNumber(holding.current_value)}</span>
+                    </div>
+                    {holding.transferable && (
+                      <div className="detail-row">
+                        <span>Available</span>
+                        <span className="value">{formatNumber(parseFloat(holding.transferable), 8)}</span>
+                      </div>
+                    )}
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
       )}
     </Container>
   );

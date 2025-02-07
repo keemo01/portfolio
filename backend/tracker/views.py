@@ -363,39 +363,42 @@ class BinanceRealtime(View):
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def blog_comments(request, blog_id):
-    """
-    GET /blogs/<blog_id>/comments/
-    Returns: All comments for specified blog
-    
-    POST /blogs/<blog_id>/comments/
-    Required data: content, parent (optionaxl for replies)
-    Returns: Created comment data
-    Requires: Authentication Token
-    """
     blog = get_object_or_404(Blog, id=blog_id)
     if request.method == 'GET':
-        comments = Comment.objects.filter(blog=blog, parent=None)
-        serializer = CommentSerializer(comments, many=True)
+        # Get all comments, including replies
+        parent_comments = Comment.objects.filter(blog=blog, parent=None)
+        serializer = CommentSerializer(parent_comments, many=True)
         return Response(serializer.data)
     elif request.method == 'POST':
+        # Create new comment
         serializer = CommentSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(blog=blog, author=request.user)
+            serializer.save(
+                blog=blog,
+                author=request.user,
+                parent_id=request.data.get('parent')  # Allow for replies
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def delete_comment(request, blog_id, comment_id):
+def delete_comment(request, comment_id):
     """
-    DELETE /api/blogs/<blog_id>/comments/<comment_id>/
-    Deletes a comment if the user is the author and the comment belongs to the specified blog
+    DELETE /api/comments/<comment_id>/
     """
     try:
-        comment = get_object_or_404(Comment, id=comment_id, blog_id=blog_id)
+        comment = get_object_or_404(Comment, id=comment_id)
+        
+        # Check if user is authorized to delete the comment
         if comment.author != request.user:
-            return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {'detail': 'You can only delete your own comments'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Delete the comment and its replies
         comment.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     except Comment.DoesNotExist:
