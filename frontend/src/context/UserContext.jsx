@@ -34,7 +34,7 @@ const UserProvider = ({ children }) => {
   );
 
   useEffect(() => {
-    // Function to verify the token and fetch user data
+    // This Function is used to verify the token and fetch users data
     const verifyToken = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -64,7 +64,7 @@ const UserProvider = ({ children }) => {
         localStorage.removeItem('token');
         setUser(null);
       } finally {
-        setLoading(false); // Stop loading after verification
+        setLoading(false); // Stops loading after verification
       }
     };
 
@@ -72,7 +72,7 @@ const UserProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // Update localStorage whenever user state changes
+    // Update the localStorage whenever user state changes
     if (user) {
       localStorage.setItem('user', JSON.stringify(user));
     } else {
@@ -86,9 +86,9 @@ const UserProvider = ({ children }) => {
   };
 
   return (
-    // Give the user's data and loading status to the context
+    // Give the loading status and data of the user to context.
     <UserContext.Provider value={{ user, setUser, loading, logout }}>
-      {!loading && children} {/* Render children only when not loading */}
+      {!loading && children} {/* Only render children once loading is complete to avoid flickering */}
     </UserContext.Provider>
   );
 };

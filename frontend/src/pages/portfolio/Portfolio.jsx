@@ -4,86 +4,90 @@ import { UserContext } from '../../context/UserContext';
 import { Container, Card, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaCoins, FaExchangeAlt, FaChartLine, FaWallet } from 'react-icons/fa';
-import './Portfolio.css';
+import './Portfolio.css';  
 
 const Portfolio = () => {
-  const { user } = useContext(UserContext);
-  const navigate = useNavigate();
-  const [portfolioData, setPortfolioData] = useState([]);
-  const [totalValue, setTotalValue] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { user } = useContext(UserContext);  // Accessing the current user context (login information)
+  const navigate = useNavigate();  // For navigation programmatically
+  const [portfolioData, setPortfolioData] = useState([]);  // State to hold portfolio data
+  const [totalValue, setTotalValue] = useState(0);  // State to store the total value of the portfolio
+  const [loading, setLoading] = useState(true);  // This is the loading state for fetching data
+  const [error, setError] = useState(null);  //This is the state for error messages
 
+  // Fetch portfolio data when the component mounts or when user info changes
   useEffect(() => {
     const fetchPortfolio = async () => {
-      if (!user?.token) {
-        navigate('/login');
+      if (!user?.token) {  // Check if the user has a token (logged in)
+        navigate('/login');  // Redirect to login if not
         return;
       }
 
       try {
-        setLoading(true);
+        setLoading(true);  // Set loading to true before fetching data
         console.log('Fetching portfolio with token:', user.token);
         const response = await axios.get('http://127.0.0.1:8000/api/portfolio/', {
           headers: { 
-            'Authorization': `Token ${user.token}`,
-            'Content-Type': 'application/json'
+            'Authorization': `Token ${user.token}`,  // Pass the token in the request header
+            'Content-Type': 'application/json'  // Ensure the request is in JSON format
           }
         });
         
         console.log('Portfolio response:', response.data);
         
-        if (response.data.portfolio) {
-          // Sort holdings by value
+        if (response.data.portfolio) {  // If portfolio data exists in the response
           const sortedHoldings = response.data.portfolio
-            .sort((a, b) => parseFloat(b.current_value) - parseFloat(a.current_value))
+            .sort((a, b) => parseFloat(b.current_value) - parseFloat(a.current_value))  // Sort holdings by current value
             .map(holding => ({
               ...holding,
-              current_value: parseFloat(holding.current_value).toFixed(2),
+              current_value: parseFloat(holding.current_value).toFixed(2),  
               current_price: parseFloat(holding.current_price).toFixed(2)
             }));
             
-          setPortfolioData(sortedHoldings);
-          setTotalValue(response.data.total_value || 0);
-          setError(null);
+          setPortfolioData(sortedHoldings);  // Update portfolio data state
+          setTotalValue(response.data.total_value || 0);  // Set the total value of portfolio
+          setError(null);  // Clear any previous error
         }
         
-        if (response.data.errors?.length > 0) {
+        if (response.data.errors?.length > 0) {  // If there are errors in the response
           console.error('Portfolio errors:', response.data.errors);
-          setError(response.data.errors.join('. '));
+          setError(response.data.errors.join('. '));  // Display errors to the user
         }
       } catch (error) {
         console.error('Portfolio error:', error.response?.data || error);
-        handlePortfolioError(error);
+        handlePortfolioError(error);  // Handle errors by setting appropriate error message
       } finally {
-        setLoading(false);
+        setLoading(false);  // Set loading to false once data is fetched or error occurs
       }
     };
 
-    fetchPortfolio();
-  }, [user, navigate]);
+    fetchPortfolio();  // Call the function to fetch portfolio data
+  }, [user, navigate]);  // Dependency array - re-run when user or navigate changes
 
+  // Function to handle errors during portfolio fetch
   const handlePortfolioError = (error) => {
     if (error.response?.status === 400 && error.response?.data?.detail?.includes('API keys')) {
-      setError('Please add your exchange API keys in your profile settings');
+      setError('Please add your exchange API keys in your profile settings');  // Specific error if API keys are missing
     } else if (error.response?.data?.errors) {
-      setError(error.response.data.errors.join('. '));
+      setError(error.response.data.errors.join('. '));  // Handle other errors
     } else {
-      setError('Failed to load portfolio data. Please try again later.');
+      setError('Failed to load portfolio data. Please try again later.');  // Generic error message
     }
   };
 
+  // Function to get the coin icon image based on symbol
   const getCoinIcon = (symbol) => {
     return `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`;
   };
 
+  // Function to format numbers with commas and decimals
   const formatNumber = (num, decimals = 2) => {
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: decimals,
-    }).format(num);
+    }).format(num);  // Format numbers with commas and specified decimals
   };
 
+  // Return nothing if no user is logged in
   if (!user) return null;
 
   return (
@@ -101,6 +105,7 @@ const Portfolio = () => {
         </div>
       </div>
 
+      {/* Conditional rendering based on loading state and errors */}
       {loading ? (
         <div className="loading-container">
           <Spinner animation="border" variant="primary" />

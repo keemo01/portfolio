@@ -5,14 +5,18 @@ import { UserContext } from '../../context/UserContext';
 import './Blog.css';
 
 const Blog = () => {
+    // Store all blog posts
     const [blogs, setBlogs] = useState([]);
+    // Track title, content, and media files for new posts
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
-    const [media, setMedia] = useState([]); // Store uploaded images/videos
+    const [media, setMedia] = useState([]); // For uploaded images/videos
     const [isFormOpen, setIsFormOpen] = useState(false);
     
+    // Gets the user data from the context
     const { user } = useContext(UserContext);
 
+    // Fetch all blog posts
     useEffect(() => {
         fetchBlogs();
     }, []);
@@ -32,7 +36,7 @@ const Blog = () => {
     };
 
     const handleMediaChange = (e) => {
-        setMedia([...e.target.files]); // Store selected files
+        setMedia([...e.target.files]); // Store specific files
     };
 
     const handleCreateBlog = async (e) => {
@@ -42,7 +46,7 @@ const Blog = () => {
         formData.append('title', title);
         formData.append('content', content);
 
-        // Append each selected file
+        // Add every one of the chosen files
         media.forEach((file) => {
             formData.append('media', file);
         });
@@ -86,7 +90,7 @@ const Blog = () => {
                     >
                         {isFormOpen ? '×' : '+'}
                     </button>
-
+                    {/* Show the form to create a new blog post */}
                     {isFormOpen && (
                         <form className="create-blog-form" onSubmit={handleCreateBlog}>
                             <h3>Create New Post</h3>
@@ -129,7 +133,7 @@ const Blog = () => {
                 </>
             )}
 
-            {/* Display blog posts */}
+            {/* Display all blog posts */}
             <div className="blog-posts">
                 {blogs.length === 0 ? (
                     <div className="empty-state">No blog posts found</div>

@@ -18,8 +18,8 @@ const App = () => {
     return (
         <UserProvider>
             <div className="app">
-                <Navbar />
-                <Routes>
+                <Navbar />{/* Navbar component */}
+                <Routes>{/* Routes for different pages */}
                     <Route path="/" element={<Home />} />
                     <Route path="/coin/:coinId" element={<Coin />} />
                     <Route path="/signup" element={<SignUp />} />
@@ -30,7 +30,7 @@ const App = () => {
                     <Route path="/portfolio" element={<Portfolio />} />
                     <Route path="/news" element={<CryptoNews />} />
                 </Routes>
-                <Footer />
+                <Footer /> {/* Footer component */}
             </div>
         </UserProvider>
     );

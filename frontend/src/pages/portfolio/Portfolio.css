@@ -7,6 +7,28 @@
     color: #333;
     background-color: #f8f9fa;
     min-height: 100vh;
+    opacity: 0;
+    animation: fadeIn 1s forwards;
+}
+
+/* General animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+    0% {
+        transform: scale(0.95);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-50px); }
+    to { transform: translateX(0); }
 }
 
 .portfolio-header {
@@ -19,15 +41,19 @@
     align-items: center;
     font-size: 2.5rem;
     margin: 0;
+    transform: translateX(-50px);
+    animation: slideInLeft 0.6s ease-out forwards;
 }
 
 .total-value-card {
-    background: linear-gradient(135deg, #1a237e, #0d47a1);
+    background: linear-gradient(135deg, #ffffff, #fff700);
     color: white;
     border: none;
     border-radius: 15px;
     padding: 0.5rem 2rem;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    animation: fadeIn 1s ease-in 0.3s forwards;
 }
 
 .asset-card {
@@ -35,13 +61,15 @@
     border: none;
     border-radius: 15px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
     overflow: hidden;
+    opacity: 0;
+    animation: fadeIn 1s ease-out forwards;
 }
 
 .asset-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-10px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .asset-card-header {
@@ -49,6 +77,8 @@
     align-items: center;
     padding: 1rem;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    opacity: 0;
+    animation: fadeIn 1s ease-in 0.6s forwards;
 }
 
 .coin-icon {
@@ -82,6 +112,8 @@
     align-items: center;
     padding: 0.5rem 0;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    opacity: 0;
+    animation: fadeIn 1s ease-in 0.9s forwards;
 }
 
 .detail-row:last-child {
@@ -106,6 +138,7 @@
 .loading-container {
     text-align: center;
     padding: 3rem;
+    animation: fadeIn 1s ease-in 0.3s forwards;
 }
 
 .empty-portfolio {
@@ -114,12 +147,15 @@
     background: white;
     border-radius: 15px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    opacity: 0;
+    animation: fadeIn 1s ease-out forwards;
 }
 
 .custom-alert {
     border: none;
     border-radius: 15px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    animation: fadeIn 1s ease-in 0.6s forwards;
 }
 
 /* Hero Section */
@@ -129,6 +165,8 @@
     background-color: #f8f9fa;
     border-radius: 8px;
     margin-bottom: 3rem;
+    opacity: 0;
+    animation: fadeIn 1s ease-in forwards;
 }
 
 .hero-section h1 {
@@ -185,6 +223,8 @@
     font-size: 1.1rem;
     color: #333;
     transition: transform 0.3s ease;
+    opacity: 0;
+    animation: fadeIn 1s ease-out forwards;
 }
 
 .skill-item:hover {
@@ -208,6 +248,8 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     transition: transform 0.3s ease;
+    opacity: 0;
+    animation: fadeIn 1s ease-in 0.6s forwards;
 }
 
 .project-card:hover {
@@ -227,7 +269,7 @@
 .project-card h3 {
     font-size: 1.5rem;
     margin: 1rem 1rem 0.5rem 1rem;
-    color: #2c3e50;
+    color: #2d6fb1;
 }
 
 .project-card p {
@@ -309,6 +351,10 @@
     }
 
     .total-value-card {
-        padding: 0.5rem 1rem;
+        padding: 0.5rem 1.5rem;
+    }
+
+    .asset-card {
+        padding: 1rem;
     }
 }
