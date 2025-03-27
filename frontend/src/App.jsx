@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar/Navbar';
 import Home from './pages/Home/Home';
 import Coin from './pages/Coin/Coin';
@@ -11,6 +11,7 @@ import CryptoNews from './pages/News/CryptoNews';
 import Profile from './pages/Profile/Profile';
 import BlogPost from './pages/Blog/BlogPost';
 import Portfolio from './pages/Portfolio/Portfolio';
+import UserProfile from './pages/UserProfile/UserProfile';
 import { UserProvider } from './context/UserContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -27,6 +28,7 @@ const App = () => {
                     <Route path="/blog" element={<Blog />} />
                     <Route path="/blog/:id" element={<BlogPost />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/profile/:userId" element={<UserProfile />} />
                     <Route path="/portfolio" element={<Portfolio />} />
                     <Route path="/news" element={<CryptoNews />} />
                 </Routes>

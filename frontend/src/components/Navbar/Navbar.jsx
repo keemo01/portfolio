@@ -83,7 +83,6 @@ const handleLogout = async () => {
                 {user && (
                     <>
                         <li><Link to="/blog">Blog</Link></li>
-                        <li><Link to="/news">News</Link></li>
                     </>
                 )}
             </ul>
