@@ -10,6 +10,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -127,7 +128,7 @@ def get_bybit_holdings(api_key, secret_key):
     return all_balances
 
 @api_view(['POST'])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def add_holding(request):
     """
@@ -153,7 +154,7 @@ def add_holding(request):
     return Response({'detail': 'Holding added'}, status=status.HTTP_201_CREATED)
 
 @api_view(['POST', 'GET'])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def portfolio(request):
     user = request.user
@@ -261,7 +262,7 @@ def portfolio(request):
     }, status=status.HTTP_200_OK)
 
 @api_view(['POST', 'GET'])
-@authentication_classes([TokenAuthentication])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def manage_api_keys(request):
     """
@@ -296,7 +297,7 @@ def manage_api_keys(request):
                             'recvWindow': '5000'  # Adding recvWindow parameter
                         }
                         
-                        # Create a proper query string and signature
+                        # Generate signature for Binance
                         query_string = urlencode(params)
                         signature = hmac.new(
                             api_keys.binance_secret_key.encode('utf-8'),

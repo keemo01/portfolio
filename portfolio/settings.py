@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 
 import os
@@ -47,7 +48,9 @@ INSTALLED_APPS = [
     'tracker',
     'rest_framework',
     'rest_framework.authtoken',
+    'rest_framework_simplejwt',
     'rest_framework_nested',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'channels',
 ]
@@ -63,6 +66,17 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 ]
+
+REST_FRAMEWORK = {  
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
 
 
 ROOT_URLCONF = "portfolio.urls"
@@ -151,3 +165,15 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),  # Access token 
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),  # Refresh token 
+    'ROTATE_REFRESH_TOKENS': False,  # No refresh token rotation
+    'BLACKLIST_AFTER_ROTATION': True,  # Blacklist old tokens after rotation
+    'ALGORITHM': 'HS256',  # JWT algorithm
+    'SIGNING_KEY': SECRET_KEY,  # Secret key
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+}
