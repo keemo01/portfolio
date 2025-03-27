@@ -6,8 +6,7 @@ from .models import Blog, BlogMedia, Comment
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password']
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = ('id', 'username', 'email')
 
 class BlogMediaSerializer(serializers.ModelSerializer):
     file = serializers.SerializerMethodField()
@@ -24,11 +23,12 @@ class BlogMediaSerializer(serializers.ModelSerializer):
 
 class BlogSerializer(serializers.ModelSerializer):
     author = serializers.StringRelatedField(source='author.username')
+    author_id = serializers.IntegerField(source='author.id', read_only=True)
     media = BlogMediaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Blog
-        fields = ['id', 'title', 'content', 'author', 'created_at', 'media']
+        fields = ['id', 'title', 'content', 'author', 'author_id', 'created_at', 'media']
         
     def to_representation(self, instance):
         """

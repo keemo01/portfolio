@@ -4,7 +4,7 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 # Import views from specific modules
-from .views import user_views, blogs_views, portfolio_views
+from .views import user_views, blogs_views, portfolio_views, search_views
 
 urlpatterns = [
     # User authentication routes
@@ -36,6 +36,11 @@ urlpatterns = [
     path('portfolio/', portfolio_views.portfolio, name='portfolio'),  # Route to view the user's portfolio
     path('portfolio/add/', portfolio_views.add_holding, name='add_holding'),  # Route to add a new holding to the portfolio
     path('profile/api-keys/', portfolio_views.manage_api_keys, name='manage_api_keys'),  # Route to manage API keys in user profile
+
+    # Search-related routes
+    path('api/search/', search_views.search, name='search'),
+    path('api/profile/<int:user_id>/', search_views.get_user_profile, name='user-profile'),
+    path('api/profile/<int:user_id>/posts/', search_views.get_user_posts, name='user-posts'),
 ]
 
 # Serve media files in development

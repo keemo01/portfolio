@@ -177,3 +177,4 @@ def get_user_blog(request, blog_id):
             {"detail": "Blog not found or you don't have permission to view it"}, 
             status=status.HTTP_404_NOT_FOUND
         )
+
