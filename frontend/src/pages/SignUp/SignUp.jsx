@@ -11,11 +11,14 @@ const SignUp = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const userData = { username, email, password };
+        
+        const userData = { 
+            username: username.trim(), 
+            email: email.trim(), 
+            password: password.trim() 
+        };
 
-        console.log('Payload being sent:', userData); // Debugging
-
-        if (!username || !email || !password) {
+        if (!userData.username || !userData.email || !userData.password) {
             setError('All fields are required');
             return;
         }
@@ -25,18 +28,22 @@ const SignUp = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                 },
                 body: JSON.stringify(userData),
             });
+
             const data = await response.json();
+            console.log('Server Response:', data); // Debugging
+
             if (response.ok) {
                 navigate('/login'); // Navigate to login page
             } else {
-                setError(data.detail || 'Something went wrong');
+                setError(data.detail || data.error || 'Signup failed');
             }
         } catch (err) {
             console.error('Signup failed:', err);
-            setError('Failed to sign up');
+            setError('Failed to sign up. Please try again.');
         }
     };
 
@@ -67,7 +74,7 @@ const SignUp = () => {
                 />
                 <button type="submit">Sign Up</button>
             </form>
-            {error && <p>{error}</p>}
+            {error && <p className="error-message">{error}</p>}
         </div>
     );
 };

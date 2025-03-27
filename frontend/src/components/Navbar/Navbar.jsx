@@ -35,24 +35,31 @@ const Navbar = () => {
     };
 
     // Handle logout
-    const handleLogout = async () => {
-        if (user && user.token) {
-            try {
-                logout(); // Clear local state first
-                await axios.post('http://127.0.0.1:8000/api/logout/', {}, {
-                    headers: {
-                        Authorization: `Token ${user.token}`,
-                    },
-                });
-                navigate('/login'); // Redirect to login page
-            } catch (error) {
-                console.error('Error logging out:', error);
-                // Even if the server request fails, we still want to logout locally
-                logout();
-                navigate('/login');
-            }
+const handleLogout = async () => {
+    // Get the refresh token from localStorage
+    const refresh_token = localStorage.getItem('refresh_token');
+    try {
+        // Clear the user state
+      logout(); 
+  
+        // Send a POST request to the logout endpoint
+      await axios.post('http://127.0.0.1:8000/api/logout/', 
+        { refresh_token }, 
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+          },
         }
-    };
+      );
+      navigate('/login'); // Redirect to the login page
+    } catch (error) {
+      console.error('Error logging out:', error);
+      // Even if the server request fails, we still want to logout locally
+      logout();
+      navigate('/login');
+    }
+  };
+  
 
     const CustomToggle = React.forwardRef(({ children, onClick }, ref) => (
         <div

@@ -17,18 +17,20 @@ const Portfolio = () => {
   // Fetch portfolio data when the component mounts or when user info changes
   useEffect(() => {
     const fetchPortfolio = async () => {
-      if (!user?.token) {  // Check if the user has a token (logged in)
-        navigate('/login');  // Redirect to login if not
+      // Get token from localStorage instead of user context
+      const token = localStorage.getItem('access_token');
+      
+      if (!token) {
+        navigate('/login');
         return;
       }
 
       try {
-        setLoading(true);  // Set loading to true before fetching data
-        console.log('Fetching portfolio with token:', user.token);
+        setLoading(true);
         const response = await axios.get('http://127.0.0.1:8000/api/portfolio/', {
           headers: { 
-            'Authorization': `Token ${user.token}`,  // Pass the token in the request header
-            'Content-Type': 'application/json'  // Ensure the request is in JSON format
+            'Authorization': `Bearer ${token}`, // Changed from Token to Bearer
+            'Content-Type': 'application/json'
           }
         });
         
@@ -53,6 +55,12 @@ const Portfolio = () => {
           setError(response.data.errors.join('. '));  // Display errors to the user
         }
       } catch (error) {
+        if (error.response?.status === 401) {
+          // Token expired or invalid
+          localStorage.removeItem('access_token');
+          navigate('/login');
+          return;
+        }
         console.error('Portfolio error:', error.response?.data || error);
         handlePortfolioError(error);  // Handle errors by setting appropriate error message
       } finally {
@@ -61,7 +69,7 @@ const Portfolio = () => {
     };
 
     fetchPortfolio();  // Call the function to fetch portfolio data
-  }, [user, navigate]);  // Dependency array - re-run when user or navigate changes
+  }, [navigate]);  // Dependency array - re-run when user or navigate changes
 
   // Function to handle errors during portfolio fetch
   const handlePortfolioError = (error) => {

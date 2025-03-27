@@ -5,82 +5,106 @@ import { UserContext } from '../../context/UserContext';
 import './Blog.css';
 
 const Blog = () => {
-    // Store all blog posts
     const [blogs, setBlogs] = useState([]);
-    // Track title, content, and media files for new posts
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
-    const [media, setMedia] = useState([]); // For uploaded images/videos
+    const [media, setMedia] = useState([]);
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [error, setError] = useState(null);
     
-    // Gets the user data from the context
     const { user } = useContext(UserContext);
 
-    // Fetch all blog posts
+    // Base URL for your Django backend
+    const BASE_URL = 'http://127.0.0.1:8000/api';
+
     useEffect(() => {
         fetchBlogs();
     }, []);
 
-    const fetchBlogs = () => {
-        axios.get('http://127.0.0.1:8000/api/blogs/')
-            .then((response) => setBlogs(response.data))
-            .catch((error) => console.error('Error fetching blogs:', error));
+    const fetchBlogs = async () => {
+        try {
+            const response = await axios.get(`${BASE_URL}/blogs/`);
+            setBlogs(response.data);
+        } catch (error) {
+            console.error('Error fetching blogs:', error);
+            setError('Unable to fetch blogs. Please try again later.');
+        }
     };
 
-    const handleDelete = (blogId) => {
-        axios.delete(`http://127.0.0.1:8000/api/blogs/delete/${blogId}/`, {
-            headers: { Authorization: `Token ${user.token}` },
-        })
-        .then(() => fetchBlogs())
-        .catch((error) => console.error('Error deleting blog:', error));
+    const handleDeleteBlog = async (blogId) => {
+        // Confirm deletion
+        const confirmDelete = window.confirm('Are you sure you want to delete this blog post?');
+        if (!confirmDelete) return;
+
+        try {
+            await axios.delete(`${BASE_URL}/blogs/delete/${blogId}/`, {
+                headers: { 
+                    'Authorization': `Bearer ${user.token}`,
+                    'Content-Type': 'application/json'
+                },
+            });
+            // Remove the deleted blog from the local state
+            setBlogs(blogs.filter(blog => blog.id !== blogId));
+        } catch (error) {
+            console.error('Error deleting blog:', error);
+            
+            if (error.response && error.response.status === 403) {
+                setError('You can only delete your own blog posts.');
+            } else {
+                setError('Unable to delete blog. Please try again.');
+            }
+        }
     };
 
     const handleMediaChange = (e) => {
-        setMedia([...e.target.files]); // Store specific files
+        setMedia([...e.target.files]);
     };
 
     const handleCreateBlog = async (e) => {
         e.preventDefault();
         
         const formData = new FormData();
-        formData.append('title', title);
-        formData.append('content', content);
-
-        // Add every one of the chosen files
-        media.forEach((file) => {
+        formData.append('title', title.trim());
+        formData.append('content', content.trim());
+    
+        media.forEach((file, index) => {
             formData.append('media', file);
         });
-
+    
         try {
-            await axios.post('http://127.0.0.1:8000/api/blogs/create/', formData, {
+            await axios.post(`${BASE_URL}/blogs/create/`, formData, {
                 headers: {
-                    'Authorization': `Token ${user.token}`,
+                    'Authorization': `Bearer ${user.token}`,
                     'Content-Type': 'multipart/form-data',
                 },
             });
+            
+            // Reset form state
             setTitle('');
             setContent('');
-            setMedia([]); // Clear selected files
+            setMedia([]);
             setIsFormOpen(false);
             fetchBlogs();
         } catch (error) {
-            console.error('Error creating blog:', error);
+            console.error('Error creating blog:', error.response?.data || error.message);
+            setError('Unable to create blog. Please check your input and try again.');
         }
     };
 
-    const formatDate = (dateString) => {
+    const formatDateTime = (dateString) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    };
-
-    const formatTime = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(' ', '');
+        return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(' ', '')}`;
     };
 
     return (
         <div className="blog-container">
             <h1>Cryptonia Blog</h1>
+
+            {error && (
+                <div className="error-message" style={{color: 'red', marginBottom: '10px'}}>
+                    {error}
+                </div>
+            )}
 
             {user && (
                 <>
@@ -90,7 +114,6 @@ const Blog = () => {
                     >
                         {isFormOpen ? '×' : '+'}
                     </button>
-                    {/* Show the form to create a new blog post */}
                     {isFormOpen && (
                         <form className="create-blog-form" onSubmit={handleCreateBlog}>
                             <h3>Create New Post</h3>
@@ -100,12 +123,14 @@ const Blog = () => {
                                 onChange={(e) => setTitle(e.target.value)}
                                 placeholder="Post Title"
                                 required
+                                maxLength={200}  // Add a reasonable max length
                             />
                             <textarea
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
                                 placeholder="Write your content here..."
                                 required
+                                maxLength={5000}  // Add a reasonable max content length
                             />
                             <div>
                                 <label>Upload Images/Videos:</label>
@@ -115,6 +140,7 @@ const Blog = () => {
                                     multiple
                                     onChange={handleMediaChange}
                                 />
+                                <small>{media.length} file(s) selected</small>
                             </div>
                             <div className="form-actions">
                                 <button 
@@ -133,7 +159,6 @@ const Blog = () => {
                 </>
             )}
 
-            {/* Display all blog posts */}
             <div className="blog-posts">
                 {blogs.length === 0 ? (
                     <div className="empty-state">No blog posts found</div>
@@ -144,13 +169,11 @@ const Blog = () => {
                                 <Link to={`/blog/${blog.id}`} className="post-title-link">
                                     <h3>{blog.title}</h3>
                                 </Link>
+                                {/* Delete button only for the blog author */}
                                 {user && user.username === blog.author && (
                                     <button 
                                         className="delete-btn"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDelete(blog.id);
-                                        }}
+                                        onClick={() => handleDeleteBlog(blog.id)}
                                     >
                                         Delete
                                     </button>
@@ -165,7 +188,6 @@ const Blog = () => {
                                 </p>
                             </Link>
 
-                            {/* Display images and videos */}
                             <div className="post-media">
                                 {blog.media.map((file, index) => (
                                     file.file.endsWith('.mp4') || file.file.endsWith('.mov') ? (
@@ -180,9 +202,7 @@ const Blog = () => {
                             </div>
 
                             <div className="post-footer">
-                                <span>
-                                    {formatDate(blog.created_at)} - {formatTime(blog.created_at)}
-                                </span>
+                                <span>{formatDateTime(blog.created_at)}</span>
                                 <span className="author">By {blog.author}</span>
                             </div>
                         </div>

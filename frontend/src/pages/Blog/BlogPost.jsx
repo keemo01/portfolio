@@ -84,9 +84,7 @@ const BlogPost = () => {
                 const [blogResponse, commentsResponse] = await Promise.all([
                     axios.get(`http://127.0.0.1:8000/api/blogs/${id}/`),
                     axios.get(`http://127.0.0.1:8000/api/blogs/${id}/comments/`, {
-                        headers: user ? {
-                            'Authorization': `Token ${user.token}`
-                        } : {}
+                        headers: user ? { 'Authorization': `Token ${user.token}` } : {}
                     })
                 ]);
                 setBlog(blogResponse.data);
@@ -95,7 +93,7 @@ const BlogPost = () => {
                 console.error('Error fetching blog post:', error);
                 setBlog(null);
             }
-        };
+        };        
         fetchBlogPost();
     }, [id, user]);
 
@@ -138,19 +136,15 @@ const BlogPost = () => {
 
     const handleDeleteComment = async (commentId) => {
         try {
-            await axios.delete(
-                `http://127.0.0.1:8000/api/comments/${commentId}/`,
-                { 
-                    headers: { 
-                        'Authorization': `Token ${user.token}` 
-                    } 
-                }
-            );
+            await axios.delete(`http://127.0.0.1:8000/api/comments/${commentId}/`, {
+                headers: { Authorization: `Bearer ${user.token}` },
+            });
             setComments(comments.filter(comment => comment.id !== commentId));
         } catch (error) {
             console.error('Error deleting comment:', error);
         }
     };
+    
 
     if (!blog) return <div className="blog-container">Loading...</div>;
 
