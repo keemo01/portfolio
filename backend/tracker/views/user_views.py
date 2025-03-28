@@ -178,3 +178,20 @@ def get_user_blog(request, blog_id):
             status=status.HTTP_404_NOT_FOUND
         )
 
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout_view(request):
+    try:
+        # Get the token from the request
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return Response({'error': 'No valid token provided'}, status=401)
+        
+        token = auth_header.split(' ')[1]
+        # Check if the token is valid
+        request.user.auth_token.delete()
+        
+        return Response({'message': 'Successfully logged out'}, status=200)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)

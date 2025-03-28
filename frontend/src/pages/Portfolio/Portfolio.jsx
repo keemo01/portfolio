@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import { UserContext } from '../../context/UserContext';
-import { Container, Card, Row, Col, Alert, Spinner } from 'react-bootstrap';
+import { Container, Card, Row, Col, Alert, Spinner, Modal, Form, Button, Badge } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaCoins, FaExchangeAlt, FaChartLine, FaWallet } from 'react-icons/fa';
 import './Portfolio.css';  
@@ -13,6 +13,19 @@ const Portfolio = () => {
   const [totalValue, setTotalValue] = useState(0);  // State to store the total value of the portfolio
   const [loading, setLoading] = useState(true);  // This is the loading state for fetching data
   const [error, setError] = useState(null);  //This is the state for error messages
+  const [showApiModal, setShowApiModal] = useState(false);
+  const [apiKeys, setApiKeys] = useState({
+    binance_api_key: '',
+    binance_secret_key: '',
+    bybit_api_key: '',
+    bybit_secret_key: ''
+  });
+  const [apiKeyStatus, setApiKeyStatus] = useState({
+    binance: false,
+    bybit: false
+  });
+  const [savingKeys, setSavingKeys] = useState(false);
+  const [apiError, setApiError] = useState(null);
 
   // Fetch portfolio data when the component mounts or when user info changes
   useEffect(() => {
@@ -95,6 +108,111 @@ const Portfolio = () => {
     }).format(num);  // Format numbers with commas and specified decimals
   };
 
+  // Add this function to fetch existing API keys
+  useEffect(() => {
+    const fetchApiKeys = async () => {
+      const token = localStorage.getItem('access_token');
+      try {
+        const response = await axios.get('http://127.0.0.1:8000/api/profile/api-keys/', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.data) {
+          setApiKeyStatus({
+            binance: !!response.data.binance_api_key,
+            bybit: !!response.data.bybit_api_key
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching API keys:', error);
+      }
+    };
+
+    fetchApiKeys();
+  }, []);
+
+  // Update handleSubmitApiKeys function
+  const handleSubmitApiKeys = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('access_token');
+    setSavingKeys(true);
+    setApiError(null);
+    
+    try {
+      const response = await axios.post(
+        'http://127.0.0.1:8000/api/profile/api-keys/',
+        apiKeys,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.data) {
+        setApiKeyStatus({
+          binance: !!response.data.binance_api_key,
+          bybit: !!response.data.bybit_api_key
+        });
+        setShowApiModal(false);
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error saving API keys:', error);
+      setApiError(
+        error.response?.data?.detail || 
+        'Failed to save API keys. Please check your keys and try again.'
+      );
+    } finally {
+      setSavingKeys(false);
+    }
+  };
+
+  // Add new function to handle API key removal
+  const handleRemoveApiKeys = async (exchange) => {
+    const token = localStorage.getItem('access_token');
+    setSavingKeys(true);
+    setApiError(null);
+    
+    try {
+      const payload = {
+        [`${exchange}_api_key`]: '',
+        [`${exchange}_secret_key`]: ''
+      };
+      
+      const response = await axios.post(
+        'http://127.0.0.1:8000/api/profile/api-keys/',
+        payload,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.data) {
+        setApiKeyStatus(prev => ({
+          ...prev,
+          [exchange]: false
+        }));
+        setApiKeys(prev => ({
+          ...prev,
+          [`${exchange}_api_key`]: '',
+          [`${exchange}_secret_key`]: ''
+        }));
+      }
+    } catch (error) {
+      setApiError('Failed to remove API keys. Please try again.');
+    } finally {
+      setSavingKeys(false);
+    }
+  };
+
   // Return nothing if no user is logged in
   if (!user) return null;
 
@@ -103,15 +221,134 @@ const Portfolio = () => {
       <div className="portfolio-header">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1><FaWallet className="me-2" />Crypto Portfolio</h1>
-          {!loading && !error && portfolioData.length > 0 && (
-            <Card className="total-value-card">
-              <Card.Body>
-                <h3 className="mb-0">Total Value: ${formatNumber(totalValue)}</h3>
-              </Card.Body>
-            </Card>
-          )}
+          <div className="d-flex gap-3">
+            {!loading && !error && portfolioData.length > 0 && (
+              <Card className="total-value-card">
+                <Card.Body>
+                  <h3 className="mb-0">Total Value: ${formatNumber(totalValue)}</h3>
+                </Card.Body>
+              </Card>
+            )}
+            <Button variant="outline-primary" onClick={() => setShowApiModal(true)}>
+              <FaExchangeAlt className="me-2" />Configure API Keys
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Add Modal Component */}
+      <Modal show={showApiModal} onHide={() => setShowApiModal(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Configure Exchange API Keys</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleSubmitApiKeys}>
+            {apiError && (
+              <Alert variant="danger" className="mb-3">
+                {apiError}
+              </Alert>
+            )}
+            
+            <h5 className="mb-3">
+              Binance API Keys
+              {apiKeyStatus.binance && (
+                <Badge bg="success" className="ms-2">Active</Badge>
+              )}
+            </h5>
+            {!apiKeyStatus.binance ? (
+              <>
+                <Form.Group className="mb-3">
+                  <Form.Label>API Key</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Enter Binance API Key"
+                    value={apiKeys.binance_api_key}
+                    onChange={(e) => setApiKeys({...apiKeys, binance_api_key: e.target.value})}
+                  />
+                </Form.Group>
+                <Form.Group className="mb-4">
+                  <Form.Label>Secret Key</Form.Label>
+                  <Form.Control
+                    type="password"
+                    placeholder="Enter Binance Secret Key"
+                    value={apiKeys.binance_secret_key}
+                    onChange={(e) => setApiKeys({...apiKeys, binance_secret_key: e.target.value})}
+                  />
+                </Form.Group>
+              </>
+            ) : (
+              <div className="mb-4">
+                <p className="text-muted mb-2">API keys are configured and active</p>
+                <Button 
+                  variant="outline-danger" 
+                  size="sm"
+                  onClick={() => handleRemoveApiKeys('binance')}
+                  disabled={savingKeys}
+                >
+                  Remove Binance Keys
+                </Button>
+              </div>
+            )}
+
+            <h5 className="mb-3">
+              Bybit API Keys
+              {apiKeyStatus.bybit && (
+                <Badge bg="success" className="ms-2">Active</Badge>
+              )}
+            </h5>
+            {!apiKeyStatus.bybit ? (
+              <>
+                <Form.Group className="mb-3">
+                  <Form.Label>API Key</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Enter Bybit API Key"
+                    value={apiKeys.bybit_api_key}
+                    onChange={(e) => setApiKeys({...apiKeys, bybit_api_key: e.target.value})}
+                  />
+                </Form.Group>
+                <Form.Group className="mb-4">
+                  <Form.Label>Secret Key</Form.Label>
+                  <Form.Control
+                    type="password"
+                    placeholder="Enter Bybit Secret Key"
+                    value={apiKeys.bybit_secret_key}
+                    onChange={(e) => setApiKeys({...apiKeys, bybit_secret_key: e.target.value})}
+                  />
+                </Form.Group>
+              </>
+            ) : (
+              <div className="mb-4">
+                <p className="text-muted mb-2">API keys are configured and active</p>
+                <Button 
+                  variant="outline-danger" 
+                  size="sm"
+                  onClick={() => handleRemoveApiKeys('bybit')}
+                  disabled={savingKeys}
+                >
+                  Remove Bybit Keys
+                </Button>
+              </div>
+            )}
+
+            <div className="d-flex justify-content-end gap-2">
+              <Button variant="secondary" onClick={() => setShowApiModal(false)}>
+                Close
+              </Button>
+              {(!apiKeyStatus.binance || !apiKeyStatus.bybit) && (
+                <Button variant="primary" type="submit" disabled={savingKeys}>
+                  {savingKeys ? (
+                    <>
+                      <Spinner size="sm" className="me-2" />
+                      Saving...
+                    </>
+                  ) : 'Save Keys'}
+                </Button>
+              )}
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
 
       {/* Conditional rendering based on loading state and errors */}
       {loading ? (
