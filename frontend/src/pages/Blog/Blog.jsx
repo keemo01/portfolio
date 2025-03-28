@@ -41,7 +41,7 @@ const Blog = () => {
         try {
             const response = await axios.get('https://newsapi.org/v2/everything', {
                 params: {
-                    apiKey: '7e07333e33234db8ac28e319fd52cdd4', // Replace with your actual NewsAPI key
+                    apiKey: '7e07333e33234db8ac28e319fd52cdd4',
                     q: 'cryptocurrency OR bitcoin OR crypto',
                     language: 'en',
                     sortBy: 'publishedAt',
@@ -50,7 +50,7 @@ const Blog = () => {
             });
     
             if (response.data && response.data.articles) {
-                setNews(response.data.articles.slice(0, 5)); // Limit to 5 articles
+                setNews(response.data.articles.slice(0, 10)); // Limit to 10 articles
             } else {
                 console.error('No news results found');
                 setNews([]);
