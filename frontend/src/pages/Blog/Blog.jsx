@@ -37,6 +37,7 @@ const Blog = () => {
         }
     };
 
+    // Fetch news articles from the News API
     const fetchNews = async () => {
         try {
             const response = await axios.get('https://newsapi.org/v2/everything', {
@@ -159,7 +160,7 @@ const Blog = () => {
         }
     };
 
-    // Debounce search function
+    // Delay search while typing
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             handleSearch(searchQuery);
@@ -270,7 +271,7 @@ const Blog = () => {
                                                 <Link to={`/blog/${blog.id}`} className="post-title-link">
                                                     <h3>{highlightText(blog.title, searchQuery)}</h3>
                                                 </Link>
-                                                {/* Delete button only for the blog author */}
+                                                {/* Delete button only available for the blog author */}
                                                 {user && user.username === blog.author && (
                                                     <button 
                                                         className="delete-btn"

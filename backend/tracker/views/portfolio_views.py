@@ -15,6 +15,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from datetime import datetime, timedelta
+from django.utils import timezone
 
 from tracker.models import  PortfolioHolding, APIKey 
 import hashlib
@@ -60,70 +62,76 @@ def get_bybit_price(coin):
 
 def get_bybit_holdings(api_key, secret_key):
     """
-    Fetch holdings from Bybit V5 API
+    Fetch holdings from both Unified and Spot accounts in Bybit V5 API
     """
-    url = "https://api.bybit.com/v5/asset/transfer/query-account-coins-balance"
-    timestamp = str(int(time.time() * 1000))
-    recv_window = "5000"
-    
-    # Split coins into batches of 10 (Bybit's limit)
-    all_coins = [
-        "USDT", "BTC", "ETH", "SOL", "XRP", "MATIC", "DOGE", "ADA", "DOT", "AVAX",
-        "LINK", "UNI", "SHIB", "LTC", "ATOM", "BCH", "NEAR", "APE", "FTM", "HBAR",
-        "TRX", "OP", "ARB", "FLOW", "SAND", "MANA", "GALA", "IMX", "LDO", "RNDR",
-        "SEI", "STX", "TIA", "AAVE", "ALGO", "AXS", "BABYDOGE", "BAND", "BAT", "BIT",
-        "BTT", "CELR", "CHZ", "COMP", "CRO", "CRV", "DASH", "DYDX", "EGLD", "ENJ",
-        "FIL", "FLOW", "GRT", "ICP", "ICX", "JASMY", "KAVA", "KLAY", "KSM", "LRC",
-        "MINA", "MKR", "NANO", "OMG", "ONT", "OCEAN", "QTUM", "RAY", "REEF", "ROSE",
-        "SNX", "STORJ", "SRM", "TFUEL", "THETA", "TON", "TWT", "VET", "XLM", "XEM",
-        "XEC", "ZEC", "ZIL", "BLUR", "PEPE", "ORDI", "WLD", "SUI", "INJ", "CYBER",
-        "BONK", "PYTH", "CFX", "AGIX", "JUP", "GMX", "1INCH", "CAKE", "DENT", "ENS"
+    all_balances = []
+    accounts = [
+        {"type": "UNIFIED", "endpoint": "/v5/asset/transfer/query-account-coins-balance"},
+        {"type": "SPOT", "endpoint": "/v5/asset/transfer/query-account-coins-balance"}
     ]
     
-    all_balances = []
-    
-    # Process coins in batches of 10
-    for i in range(0, len(all_coins), 10):
-        coin_batch = all_coins[i:i + 10]
-        params = {
-            "accountType": "UNIFIED",
-            "coin": ",".join(coin_batch)
-        }
+    for account in accounts:
+        url = f"https://api.bybit.com{account['endpoint']}"
+        timestamp = str(int(time.time() * 1000))
+        recv_window = "5000"
         
-        # Create signature
-        param_str = timestamp + api_key + recv_window + urlencode(sorted(params.items()))
-        signature = hmac.new(
-            bytes(secret_key, 'utf-8'),
-            param_str.encode('utf-8'),
-            hashlib.sha256
-        ).hexdigest()
+        # Split coins into batches of 10 (Bybit's limit)
+        all_coins = [
+            "USDT", "BTC", "ETH", "SOL", "XRP", "MATIC", "DOGE", "ADA", "DOT", "AVAX",
+            "LINK", "UNI", "SHIB", "LTC", "ATOM", "BCH", "NEAR", "APE", "FTM", "HBAR",
+            "TRX", "OP", "ARB", "FLOW", "SAND", "MANA", "GALA", "IMX", "LDO", "RNDR",
+            "SEI", "STX", "TIA", "AAVE", "ALGO", "AXS", "BABYDOGE", "BAND", "BAT", "BIT",
+            "BTT", "CELR", "CHZ", "COMP", "CRO", "CRV", "DASH", "DYDX", "EGLD", "ENJ",
+            "FIL", "FLOW", "GRT", "ICP", "ICX", "JASMY", "KAVA", "KLAY", "KSM", "LRC",
+            "MINA", "MKR", "NANO", "OMG", "ONT", "OCEAN", "QTUM", "RAY", "REEF", "ROSE",
+            "SNX", "STORJ", "SRM", "TFUEL", "THETA", "TON", "TWT", "VET", "XLM", "XEM",
+            "XEC", "ZEC", "ZIL", "BLUR", "PEPE", "ORDI", "WLD", "SUI", "INJ", "CYBER",
+            "BONK", "PYTH", "CFX", "AGIX", "JUP", "GMX", "1INCH", "CAKE", "DENT", "ENS"
+        ]
         
-        headers = {
-            'X-BAPI-API-KEY': api_key,
-            'X-BAPI-SIGN': signature,
-            'X-BAPI-TIMESTAMP': timestamp,
-            'X-BAPI-RECV-WINDOW': recv_window
-        }
+        # Process coins in batches of 10
+        for i in range(0, len(all_coins), 10):
+            coin_batch = all_coins[i:i + 10]
+            params = {
+                "accountType": account["type"],
+                "coin": ",".join(coin_batch)
+            }
+            
+            # Create signature
+            param_str = timestamp + api_key + recv_window + urlencode(sorted(params.items()))
+            signature = hmac.new(
+                bytes(secret_key, 'utf-8'),
+                param_str.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()
+            
+            headers = {
+                'X-BAPI-API-KEY': api_key,
+                'X-BAPI-SIGN': signature,
+                'X-BAPI-TIMESTAMP': timestamp,
+                'X-BAPI-RECV-WINDOW': recv_window
+            }
 
-        try:
-            response = requests.get(url, headers=headers, params=params)
-            if response.status_code == 200:
-                data = response.json()
-                # Check if the API response indicates success
-                if data.get('retCode') == 0:
-                    balance_data = data.get('result', {}).get('balance', [])
-                    for coin_data in balance_data:
-                        wallet_balance = float(coin_data.get('walletBalance', '0'))
-                        if wallet_balance > 0:
-                            all_balances.append({
-                                'coin': coin_data['coin'],
-                                'amount': wallet_balance,
-                                'transferable': float(coin_data.get('transferBalance', '0'))
-                            })
-                            print(f"Found balance for {coin_data['coin']}: {wallet_balance}")
-        except Exception as e:
-            print(f"Error fetching batch {i//10 + 1}: {e}")
-            continue
+            try:
+                response = requests.get(url, headers=headers, params=params)
+                if response.status_code == 200:
+                    data = response.json()
+                    # Check if the API response indicates success
+                    if data.get('retCode') == 0:
+                        balance_data = data.get('result', {}).get('balance', [])
+                        for coin_data in balance_data:
+                            wallet_balance = float(coin_data.get('walletBalance', '0'))
+                            if wallet_balance > 0:
+                                all_balances.append({
+                                    'coin': coin_data['coin'],
+                                    'amount': wallet_balance,
+                                    'transferable': float(coin_data.get('transferBalance', '0')),
+                                    'account_type': account["type"]  # Add account type to response
+                                })
+                                print(f"Found balance for {coin_data['coin']}: {wallet_balance}")
+            except Exception as e:
+                print(f"Error fetching batch {i//10 + 1}: {e}")
+                continue
 
     return all_balances
 
@@ -152,6 +160,8 @@ def add_holding(request):
         purchase_price=purchase_price
     )
     return Response({'detail': 'Holding added'}, status=status.HTTP_201_CREATED)
+
+from ..models import PortfolioHistory
 
 @api_view(['POST', 'GET'])
 @authentication_classes([JWTAuthentication])
@@ -185,6 +195,7 @@ def portfolio(request):
                         value = amount * current_price
                         portfolio_data.append({
                             'exchange': 'Bybit',
+                            'account_type': holding['account_type'],  # Add account type
                             'coin': coin,
                             'amount': str(amount),
                             'current_price': current_price,
@@ -255,9 +266,19 @@ def portfolio(request):
             'portfolio': []
         }, status=status.HTTP_200_OK)
 
+    total_value = sum(item['current_value'] for item in portfolio_data)
+    
+    # Save historical data point
+    if portfolio_data:  # Only save if we have data
+        PortfolioHistory.objects.create(
+            user=user,
+            total_value=total_value,
+            timestamp=timezone.now()  # Explicitly set timezone-aware timestamp
+        )
+
     return Response({
         'portfolio': portfolio_data,
-        'total_value': sum(item['current_value'] for item in portfolio_data),
+        'total_value': total_value,
         'errors': errors if errors else None
     }, status=status.HTTP_200_OK)
 
@@ -268,7 +289,7 @@ def manage_api_keys(request):
     """
     Manage the user's API keys.
     - POST: Save or update API keys for Binance and Bybit.
-    - GET: Retrieve masked API keys.
+    - GET: Retrieve hidden API keys.
     """
     if request.method == 'POST':
         try:
@@ -285,8 +306,7 @@ def manage_api_keys(request):
             
             api_keys.save()
             
-            # In test environment, skip API key validation
-            # Only validate in production environment
+            # Test the API keys if not in test environment
             if 'test' not in request.META.get('SERVER_NAME', '').lower():
                 # Test the API keys if they exist
                 try:
@@ -338,3 +358,24 @@ def manage_api_keys(request):
             })
         except APIKey.DoesNotExist:
             return Response({'has_api_keys': False})
+
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def portfolio_history(request):
+    days = int(request.GET.get('days', 30))
+    
+    history = PortfolioHistory.objects.filter(
+        user=request.user,
+        timestamp__gte=timezone.now() - timedelta(days=days)
+    ).order_by('timestamp').values('timestamp', 'total_value')  # Get only the fields we need
+    # Convert to timezone-aware datetime objects
+    
+    data = [{
+        'timestamp': timezone.localtime(entry['timestamp']).isoformat(),
+        'value': float(entry['total_value'])
+    } for entry in history]
+    
+    return Response({
+        'history': data
+    })

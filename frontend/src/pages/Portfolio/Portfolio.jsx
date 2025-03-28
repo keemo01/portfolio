@@ -5,12 +5,14 @@ import { Container, Card, Row, Col, Alert, Spinner, Modal, Form, Button, Badge }
 import { useNavigate, Link } from 'react-router-dom';
 import { FaCoins, FaExchangeAlt, FaChartLine, FaWallet } from 'react-icons/fa';
 import './Portfolio.css';  
+import PortfolioChart from '../../components/Chart/PortfolioChart';
+import AssetAllocationChart from '../../components/Chart/AssetAllocationChart';
 
 const Portfolio = () => {
-  const { user } = useContext(UserContext);  // Accessing the current user context (login information)
-  const navigate = useNavigate();  // For navigation programmatically
-  const [portfolioData, setPortfolioData] = useState([]);  // State to hold portfolio data
-  const [totalValue, setTotalValue] = useState(0);  // State to store the total value of the portfolio
+  const { user } = useContext(UserContext);  // Get user context
+  const navigate = useNavigate();  // For navigation 
+  const [portfolioData, setPortfolioData] = useState([]);  // State that stores portfolio data
+  const [totalValue, setTotalValue] = useState(0);  // State that stores the total value of the portfolio
   const [loading, setLoading] = useState(true);  // This is the loading state for fetching data
   const [error, setError] = useState(null);  //This is the state for error messages
   const [showApiModal, setShowApiModal] = useState(false);
@@ -26,8 +28,9 @@ const Portfolio = () => {
   });
   const [savingKeys, setSavingKeys] = useState(false);
   const [apiError, setApiError] = useState(null);
+  const [historicalData, setHistoricalData] = useState([]);
 
-  // Fetch portfolio data when the component mounts or when user info changes
+  // Fetch portfolio data when user info changes
   useEffect(() => {
     const fetchPortfolio = async () => {
       // Get token from localStorage instead of user context
@@ -42,7 +45,7 @@ const Portfolio = () => {
         setLoading(true);
         const response = await axios.get('http://127.0.0.1:8000/api/portfolio/', {
           headers: { 
-            'Authorization': `Bearer ${token}`, // Changed from Token to Bearer
+            'Authorization': `Bearer ${token}`, // Bearer
             'Content-Type': 'application/json'
           }
         });
@@ -51,7 +54,7 @@ const Portfolio = () => {
         
         if (response.data.portfolio) {  // If portfolio data exists in the response
           const sortedHoldings = response.data.portfolio
-            .sort((a, b) => parseFloat(b.current_value) - parseFloat(a.current_value))  // Sort holdings by current value
+            .sort((a, b) => parseFloat(b.current_value) - parseFloat(a.current_value))  // Sorts holdings by current value
             .map(holding => ({
               ...holding,
               current_value: parseFloat(holding.current_value).toFixed(2),  
@@ -59,7 +62,7 @@ const Portfolio = () => {
             }));
             
           setPortfolioData(sortedHoldings);  // Update portfolio data state
-          setTotalValue(response.data.total_value || 0);  // Set the total value of portfolio
+          setTotalValue(response.data.total_value || 0);  // Establish the entire worth of portfolio
           setError(null);  // Clear any previous error
         }
         
@@ -69,7 +72,7 @@ const Portfolio = () => {
         }
       } catch (error) {
         if (error.response?.status === 401) {
-          // Token expired or invalid
+          // Token expired or invalid - redirect to login
           localStorage.removeItem('access_token');
           navigate('/login');
           return;
@@ -77,17 +80,17 @@ const Portfolio = () => {
         console.error('Portfolio error:', error.response?.data || error);
         handlePortfolioError(error);  // Handle errors by setting appropriate error message
       } finally {
-        setLoading(false);  // Set loading to false once data is fetched or error occurs
+        setLoading(false);  // Set the loading to false once data is fetched or error occurs
       }
     };
 
     fetchPortfolio();  // Call the function to fetch portfolio data
-  }, [navigate]);  // Dependency array - re-run when user or navigate changes
+  }, [navigate]);  // Dependency array includes navigate to avoid infinite loop
 
-  // Function to handle errors during portfolio fetch
+  // Function to handle errors during the  portfolio fetch
   const handlePortfolioError = (error) => {
     if (error.response?.status === 400 && error.response?.data?.detail?.includes('API keys')) {
-      setError('Please add your exchange API keys in your profile settings');  // Specific error if API keys are missing
+      setError('Please add your exchange API keys in your profile settings');  // Error if API keys are missing
     } else if (error.response?.data?.errors) {
       setError(error.response.data.errors.join('. '));  // Handle other errors
     } else {
@@ -100,12 +103,12 @@ const Portfolio = () => {
     return `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`;
   };
 
-  // Function to format numbers with commas and decimals
+  // Function for formatting numbers with commas and decimals
   const formatNumber = (num, decimals = 2) => {
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: decimals,
-    }).format(num);  // Format numbers with commas and specified decimals
+    }).format(num);  //Format numbers using commas and specified decimals
   };
 
   // Add this function to fetch existing API keys
@@ -132,6 +135,31 @@ const Portfolio = () => {
     };
 
     fetchApiKeys();
+  }, []);
+
+  // Add new function to fetch historical data
+  const fetchHistoricalData = async (days = 30) => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    try {
+      const response = await axios.get(`http://127.0.0.1:8000/api/portfolio/history/?days=${days}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data?.history) {
+        setHistoricalData(response.data.history);
+      }
+    } catch (error) {
+      console.error('Error fetching historical data:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistoricalData();
   }, []);
 
   // Update handleSubmitApiKeys function
@@ -172,7 +200,8 @@ const Portfolio = () => {
     }
   };
 
-  // Add new function to handle API key removal
+  // Function to remove API keys
+  // This function is called when the user clicks the "Remove" button for API keys
   const handleRemoveApiKeys = async (exchange) => {
     const token = localStorage.getItem('access_token');
     setSavingKeys(true);
@@ -236,7 +265,22 @@ const Portfolio = () => {
         </div>
       </div>
 
-      {/* Add Modal Component */}
+      {/* Add chart components before the portfolio cards */}
+      {!loading && !error && portfolioData.length > 0 && (
+        <Row>
+          <Col lg={8}>
+            <PortfolioChart 
+              data={historicalData} 
+              onRangeChange={fetchHistoricalData}
+            />
+          </Col>
+          <Col lg={4}>
+            <AssetAllocationChart data={portfolioData} />
+          </Col>
+        </Row>
+      )}
+
+      {/* Add a pop-up window */}
       <Modal show={showApiModal} onHide={() => setShowApiModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Configure Exchange API Keys</Modal.Title>
@@ -350,7 +394,7 @@ const Portfolio = () => {
         </Modal.Body>
       </Modal>
 
-      {/* Conditional rendering based on loading state and errors */}
+      {/* Show different content based on loading status and errors */}
       {loading ? (
         <div className="loading-container">
           <Spinner animation="border" variant="primary" />
@@ -390,7 +434,12 @@ const Portfolio = () => {
                   />
                   <div className="asset-card-title">
                     <h4>{holding.coin}</h4>
-                    <span className="exchange-badge">{holding.exchange}</span>
+                    <div className="d-flex flex-column">
+                      <span className="exchange-badge">{holding.exchange}</span>
+                      <span className="account-badge">
+                        {holding.account_type || 'SPOT'}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 

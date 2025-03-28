@@ -358,3 +358,20 @@
         padding: 1rem;
     }
 }
+
+.account-badge {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: #e9ecef;
+  color: #495057;
+  margin-top: 2px;
+}
+
+.asset-card-title {
+  flex: 1;
+}
+
+.asset-card-title .d-flex {
+  gap: 4px;
+}

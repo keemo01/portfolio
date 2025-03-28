@@ -62,11 +62,11 @@ const Comment = ({ comment, onReply, onDelete, currentUser }) => {
 };
 
 const BlogPost = () => {
-    const { id } = useParams();
-    const [blog, setBlog] = useState(null);
-    const [comments, setComments] = useState([]);
-    const [newComment, setNewComment] = useState('');
-    const { user } = useContext(UserContext);
+    const { id } = useParams();  // Get the blog post ID from the URL parameters
+    const [blog, setBlog] = useState(null);  // State to store the blog post data
+    const [comments, setComments] = useState([]);  // State to store the comments for the blog post
+    const [newComment, setNewComment] = useState('');  // State to store the new comment input
+    const { user } = useContext(UserContext); // Get the currently logged-in user from context
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
@@ -78,72 +78,87 @@ const BlogPost = () => {
         return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(' ', '');
     };
 
+    // Fetch blog post and comments when component mounts or when `id` or `user` changes
     useEffect(() => {
         const fetchBlogPost = async () => {
             try {
+                // Fetch both blog post and comments simultaneously
                 const [blogResponse, commentsResponse] = await Promise.all([
-                    axios.get(`http://127.0.0.1:8000/api/blogs/${id}/`),
+                    axios.get(`http://127.0.0.1:8000/api/blogs/${id}/`), // Get blog post details
                     axios.get(`http://127.0.0.1:8000/api/blogs/${id}/comments/`, {
-                        headers: user ? { 'Authorization': `Token ${user.token}` } : {}
+                        headers: user ? { 'Authorization': `Token ${user.token}` } : {} // Include auth token if user is logged in
                     })
                 ]);
+
+                // Update state with fetched data
                 setBlog(blogResponse.data);
                 setComments(commentsResponse.data || []);
             } catch (error) {
                 console.error('Error fetching blog post:', error);
-                setBlog(null);
+                setBlog(null); // Reset blog state if an error occurs
             }
-        };        
+        };
+
         fetchBlogPost();
-    }, [id, user]);
+    }, [id, user]); 
+
 
     const handleCommentSubmit = async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Prevent page refresh on form submission
         try {
+            // Send a new comment to the API
             const response = await axios.post(
                 `http://127.0.0.1:8000/api/blogs/${id}/comments/`,
                 { content: newComment, blog: id },
                 { 
                     headers: { 
-                        'Authorization': `Token ${user.token}` 
+                        'Authorization': `Token ${user.token}` // Include user token for authentication
                     } 
                 }
             );
+            // Update comments list with the new comment
             setComments([response.data, ...comments]);
-            setNewComment('');
+            setNewComment(''); // Clear the input field
         } catch (error) {
             console.error('Error posting comment:', error);
         }
     };
+    
 
     const handleReply = async (parentId, content) => {
         try {
+            // Send a reply to the API with parent comment ID
             const response = await axios.post(
                 `http://127.0.0.1:8000/api/blogs/${id}/comments/`,
                 { content, parent: parentId },
                 { 
                     headers: { 
-                        'Authorization': `Token ${user.token}` 
+                        'Authorization': `Token ${user.token}` // Include user token for authentication
                     } 
                 }
             );
+            // Fetch updated list of comments after posting the reply
             const commentsResponse = await axios.get(`http://127.0.0.1:8000/api/blogs/${id}/comments/`);
-            setComments(commentsResponse.data);
+            setComments(commentsResponse.data); // Update the comments state with the latest data
         } catch (error) {
-            console.error('Error posting reply:', error);
+            console.error('Error posting reply:', error); // Log error if posting reply fails
         }
     };
+    
 
     const handleDeleteComment = async (commentId) => {
         try {
+            // Send a request to delete the comment by ID
             await axios.delete(`http://127.0.0.1:8000/api/comments/${commentId}/`, {
-                headers: { Authorization: `Bearer ${user.token}` },
+                headers: { Authorization: `Bearer ${user.token}` } // Include user token for authentication
             });
+            // Update the comments state by filtering out the deleted comment
             setComments(comments.filter(comment => comment.id !== commentId));
         } catch (error) {
-            console.error('Error deleting comment:', error);
+            console.error('Error deleting comment:', error); // Log error if deletion fails
         }
     };
+    
     
 
     if (!blog) return <div className="blog-container">Loading...</div>;

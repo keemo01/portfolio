@@ -17,52 +17,61 @@ const ProfilePage = () => {
 
   useEffect(() => {
     const fetchUserBlogs = async () => {
-      if (!user) {
-        console.warn("User not logged in");
-        setError("Please login to view your blogs");
-        setLoading(false);
-        return;
-      }
+        // Check if the user is logged in
+        if (!user) {
+            console.warn("User not logged in");
+            setError("Please login to view your blogs"); // Show error if no user is logged in
+            setLoading(false); // Stop loading
+            return;
+        }
 
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const token = localStorage.getItem('access_token');
-        const response = await axios.get(`${BASE_URL}/user-blogs/`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        setLoading(true); // Start loading state
+        setError(null); // Reset any previous errors
+        
+        try {
+            // Get the authentication token from localStorage
+            const token = localStorage.getItem('access_token');
 
-        let blogsData = Array.isArray(response.data) ? response.data : response.data.blogs || [];
-        setBlogs(blogsData);
-      } catch (err) {
-        console.error("Error fetching user blogs:", err.response || err);
-        setError("Failed to fetch blogs. Please try again.");
-      } finally {
-        setLoading(false);
-      }
+            // Fetch user blogs from the API with the token for authorization
+            const response = await axios.get(`${BASE_URL}/user-blogs/`, {
+                headers: {
+                    'Authorization': `Bearer ${token}` // Include the token in the request headers
+                }
+            });
+
+            // Check if response data is an array or an object and extract blogs
+            let blogsData = Array.isArray(response.data) ? response.data : response.data.blogs || [];
+            setBlogs(blogsData); // Set blogs data to state
+        } catch (err) {
+            // Handle any errors during the API request
+            console.error("Error fetching user blogs:", err.response || err);
+            setError("Failed to fetch blogs. Please try again."); // Show error message to user
+        } finally {
+            setLoading(false); // Stop loading state regardless of success or failure
+        }
     };
 
-    fetchUserBlogs();
-  }, [user]);
+    fetchUserBlogs(); // Call the function to fetch blogs
+}, [user]); // Re-run this effect when the `user` value changes
 
-  const handleUpdateProfile = async () => {
-    try {
+
+const handleUpdateProfile = async () => {
+  try {
+      // Get the authentication token from local storage
       const token = localStorage.getItem('access_token');
+      // Send updated profile data to the API, along with the authentication token
       const response = await axios.put(`${BASE_URL}/update-profile/`, 
-        { username, password }, 
-        { headers: { 'Authorization': `Bearer ${token}` } }
+          { username, password },  // Profile data to update
+          { headers: { 'Authorization': `Bearer ${token}` } } // Include token in headers for authentication
       );
+      setUpdateMessage("Profile updated successfully!"); // Show success message
+      setIsEditing(false); // Close the editing form or state
+  } catch (err) {
+      setUpdateMessage("Failed to update profile. Please try again."); // Show error message if update fails
+      console.error("Profile update error:", err.response || err); // Log the error for debugging
+  }
+};
 
-      setUpdateMessage("Profile updated successfully!");
-      setIsEditing(false);
-    } catch (err) {
-      setUpdateMessage("Failed to update profile. Please try again.");
-      console.error("Profile update error:", err.response || err);
-    }
-  };
 
   return (
     <div className="profile-container">

@@ -13,18 +13,18 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  # Route to log in an existing user
     path('logout/', user_views.logout, name='logout'),  # Route to log out the user
 
+    # User profile routes
+    path('profile/', user_views.user_profile, name='user_profile'),  # Route to view user profile
+    path('change-password/', user_views.change_password, name='change_password'),  # Route to change user password
+    path('user-blogs/', user_views.user_blogs, name='user_blogs'),
+    path('blogs/<int:blog_id>/', user_views.get_user_blog, name='get-user-blog'),
+
     # Blog-related routes
     path('blogs/', blogs_views.get_blogs, name='get_blogs'),
     path('blogs/<int:pk>/', blogs_views.blog_detail, name='blog_detail'),
     path('blogs/create/', blogs_views.create_blog, name='create_blog'),  # Route to create a new blog post
     path('blogs/delete/<int:blog_id>/', blogs_views.delete_blog, name='delete_blog'),  # Route to delete a blog post
     path('blogs/<int:blog_id>/comments/', blogs_views.blog_comments, name='blog_comments'),  # Route to view comments on a blog post
-
-    # User profile routes
-    path('profile/', user_views.user_profile, name='user_profile'),  # Route to view user profile
-    path('change-password/', user_views.change_password, name='change_password'),  # Route to change user password
-    path('user-blogs/', user_views.user_blogs, name='user_blogs'),
-    path('blogs/<int:blog_id>/', user_views.get_user_blog, name='get-user-blog'),
 
     # Comment management route
     path('comments/<int:comment_id>/', blogs_views.delete_comment, name='delete_comment'),  # Route to delete a specific comment
@@ -36,6 +36,7 @@ urlpatterns = [
     path('portfolio/', portfolio_views.portfolio, name='portfolio'),  # Route to view the user's portfolio
     path('portfolio/add/', portfolio_views.add_holding, name='add_holding'),  # Route to add a new holding to the portfolio
     path('profile/api-keys/', portfolio_views.manage_api_keys, name='manage_api_keys'),  # Route to manage API keys in user profile
+    path('portfolio/history/', portfolio_views.portfolio_history, name='portfolio_history'),  # Route to view portfolio history
 
     # Search-related routes
     path('api/search/', search_views.search, name='search'),
