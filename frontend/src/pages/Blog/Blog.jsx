@@ -39,16 +39,25 @@ const Blog = () => {
 
     const fetchNews = async () => {
         try {
-            const response = await axios.get('https://newsapi.org/v2/top-headlines', {
+            const response = await axios.get('https://newsapi.org/v2/everything', {
                 params: {
-                    country: 'us', // Change to relevant country or category
-                    category: 'business', // Change category if needed
-                    apiKey: '7e07333e33234db8ac28e319fd52cdd4' // Replace with your API key
+                    apiKey: '7e07333e33234db8ac28e319fd52cdd4', // Replace with your actual NewsAPI key
+                    q: 'cryptocurrency OR bitcoin OR crypto',
+                    language: 'en',
+                    sortBy: 'publishedAt',
+                    pageSize: 5
                 }
             });
-            setNews(response.data.articles.slice(0, 5)); // Limit to 5 news articles
+    
+            if (response.data && response.data.articles) {
+                setNews(response.data.articles.slice(0, 5)); // Limit to 5 articles
+            } else {
+                console.error('No news results found');
+                setNews([]);
+            }
         } catch (error) {
-            console.error('Error fetching news:', error);
+            console.error('Error fetching crypto news:', error.response?.data || error.message);
+            setNews([]); // Set to empty array on error
         }
     };
 
