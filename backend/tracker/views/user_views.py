@@ -169,7 +169,8 @@ def get_user_blog(request, blog_id):
     Get a specific blog for the authenticated user by blog ID
     """
     try:
-        blog = Blog.objects.get(id=blog_id, user=request.user)
+        # Changed filter from user=request.user to author=request.user
+        blog = Blog.objects.get(id=blog_id, author=request.user)
         serializer = BlogSerializer(blog)
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Blog.DoesNotExist:
@@ -195,3 +196,49 @@ def logout_view(request):
         return Response({'message': 'Successfully logged out'}, status=200)
     except Exception as e:
         return Response({'error': str(e)}, status=400)
+
+
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def get_user_posts(request, user_id):
+    try:
+        user = User.objects.get(id=user_id)
+        blogs = Blog.objects.filter(author=user).order_by('-created_at')  # Add ordering
+        serializer = BlogSerializer(blogs, many=True, context={'request': request})
+        return Response({
+            'status': 'success',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'User not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def get_user_profile(request, user_id):
+    try:
+        user = User.objects.get(id=user_id)
+        serializer = UserSerializer(user)
+        return Response({
+            'status': 'success',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'User not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

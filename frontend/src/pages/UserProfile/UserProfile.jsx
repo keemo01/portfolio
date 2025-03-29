@@ -18,17 +18,38 @@ const UserProfile = () => {
       setLoading(true);
       setError(null);
       
+      // Get token from localStorage
+      const token = localStorage.getItem('accessToken');
+      
+      // Configure headers
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      };
+      
       try {
-        // Fetch user profile details
-        const profileResponse = await axios.get(`${BASE_URL}/api/profile/${userId}/`);
-        setUserProfile(profileResponse.data);
+        // Update endpoints to match backend routes
+        const profileResponse = await axios.get(
+          `${BASE_URL}/user/profile/${userId}/`,
+          config
+        );
+        setUserProfile(profileResponse.data.data); // Update to access nested data
 
-        // Fetch user's posts
-        const postsResponse = await axios.get(`${BASE_URL}/api/profile/${userId}/posts/`);
-        setUserBlogs(postsResponse.data);
+        const postsResponse = await axios.get(
+          `${BASE_URL}/user/${userId}/posts/`,
+          config
+        );
+        setUserBlogs(postsResponse.data.data); // Update to access nested data
       } catch (err) {
         console.error("Error fetching user data:", err);
-        setError("Failed to load user profile. Please try again.");
+        if (err.response?.status === 401) {
+          setError("Please login to view this profile");
+          // Optionally redirect to login page
+          // navigate('/login');
+        } else {
+          setError("Failed to load user profile. Please try again.");
+        }
       } finally {
         setLoading(false);
       }
@@ -37,7 +58,7 @@ const UserProfile = () => {
     if (userId) {
       fetchUserData();
     }
-  }, [userId]);
+  }, [userId, navigate]);
 
   return (
     <div className="user-profile-container">

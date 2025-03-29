@@ -21,14 +21,15 @@ def get_blogs(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def blog_detail(request, pk):
     try:
-        blog = get_object_or_404(Blog, pk=pk)
+        blog = Blog.objects.get(pk=pk)
         serializer = BlogSerializer(blog, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Blog.DoesNotExist:
         return Response({'detail': 'Blog not found'}, status=status.HTTP_404_NOT_FOUND)
-
 
 @api_view(['POST'])
 @authentication_classes([JWTAuthentication])
@@ -98,18 +99,10 @@ def user_blogs(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
         
-# Blog Endpoints
-@api_view(['GET'])
-def get_blogs(request):
-    blogs = Blog.objects.all().order_by('-created_at')
-    serializer = BlogSerializer(blogs, many=True, context={'request': request})  # Pass request
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-        
 @api_view(['GET', 'POST'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
-def blog_comments(request, blog_id):
+def blog_comments(request, blog_id):  # Changed parameter name to match URL
     blog = get_object_or_404(Blog, id=blog_id)
     if request.method == 'GET':
         # Get all comments, including the replies
@@ -123,7 +116,7 @@ def blog_comments(request, blog_id):
             serializer.save(
                 blog=blog,
                 author=request.user,
-                parent_id=request.data.get('parent')  # Allow for replies
+                parent_id=request.data.get('parent')
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -143,5 +136,4 @@ def delete_comment(request, comment_id):
         )
     comment.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
-
 

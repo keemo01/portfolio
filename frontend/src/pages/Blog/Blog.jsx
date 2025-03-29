@@ -356,18 +356,25 @@ const Blog = () => {
                                         </p>
                                     </Link>
 
-                                    <div className="post-media">
-                                        {blog.media.map((file, index) => (
-                                            file.file.endsWith('.mp4') || file.file.endsWith('.mov') ? (
-                                                <video key={index} controls>
-                                                    <source src={file.file} type="video/mp4" />
+                                    {blog.media && blog.media.length > 0 && (
+                                        <div className="post-media-preview">
+                                            {blog.media[0].file.endsWith('.mp4') || blog.media[0].file.endsWith('.mov') ? (
+                                                <video controls className="media-preview">
+                                                    <source src={blog.media[0].file} type="video/mp4" />
                                                     Your browser does not support videos.
                                                 </video>
                                             ) : (
-                                                <img key={index} src={file.file} alt="Blog Media" />
-                                            )
-                                        ))}
-                                    </div>
+                                                <img 
+                                                    src={blog.media[0].file} 
+                                                    alt={`Preview for ${blog.title}`}
+                                                    className="media-preview"
+                                                />
+                                            )}
+                                            {blog.media.length > 1 && (
+                                                <span className="media-count">+{blog.media.length - 1} more</span>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div className="post-footer">
                                         <span>{formatDateTime(blog.created_at)}</span>

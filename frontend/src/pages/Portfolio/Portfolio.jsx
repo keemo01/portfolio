@@ -6,7 +6,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { FaCoins, FaExchangeAlt, FaChartLine, FaWallet } from 'react-icons/fa';
 import './Portfolio.css';  
 import PortfolioChart from '../../components/Chart/PortfolioChart';
-import AssetAllocationChart from '../../components/Chart/AssetAllocationChart';
 
 const Portfolio = () => {
   const { user } = useContext(UserContext);  // Get user context
