@@ -3,8 +3,8 @@ from django.urls import path, include, re_path
 from django.http import HttpResponse
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
 
-# Correct the import to reflect the right path
 from tracker.views import user_views as views
 
 def home(request):
@@ -17,6 +17,10 @@ urlpatterns = [
     re_path('login', views.login),
     re_path('signup', views.signup),
     re_path('test_token', views.test_token),
+    # Add explicit media serving URL pattern
+    re_path(r'^media/(?P<path>.*)$', serve, {
+        'document_root': settings.MEDIA_ROOT,
+    }),
 ]
 
 if settings.DEBUG:
