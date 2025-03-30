@@ -12,27 +12,30 @@ import BlogPost from './pages/Blog/BlogPost';
 import Portfolio from './pages/Portfolio/Portfolio';
 import UserProfile from './pages/UserProfile/UserProfile';
 import { UserProvider } from './context/UserContext';
+import { AuthProvider } from './context/AuthContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const App = () => {
     return (
-        <UserProvider>
-            <div className="app">
-                <Navbar />{/* Navbar component */}
-                <Routes>{/* Routes for different pages */}
-                    <Route path="/" element={<Home />} />
-                    <Route path="/coin/:coinId" element={<Coin />} />
-                    <Route path="/signup" element={<SignUp />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/blog" element={<Blog />} />
-                    <Route path="/blog/:id" element={<BlogPost />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/profile/:userId" element={<UserProfile />} />
-                    <Route path="/portfolio" element={<Portfolio />} />
-                </Routes>
-                <Footer /> {/* Footer component */}
-            </div>
-        </UserProvider>
+        <AuthProvider>
+            <UserProvider>
+                <div className="app">
+                    <Navbar />{/* Navbar component */}
+                    <Routes>{/* Routes for different pages */}
+                        <Route path="/" element={<Home />} />
+                        <Route path="/coin/:coinId" element={<Coin />} />
+                        <Route path="/signup" element={<SignUp />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/blog" element={<Blog />} />
+                        <Route path="/blog/:id" element={<BlogPost />} />
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="/profile/:userId" element={<UserProfile />} />
+                        <Route path="/portfolio" element={<Portfolio />} />
+                    </Routes>
+                    <Footer /> {/* Footer component */}
+                </div>
+            </UserProvider>
+        </AuthProvider>
     );
 };
 

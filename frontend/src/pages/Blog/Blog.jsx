@@ -16,7 +16,8 @@ const Blog = () => {
     const [isSearching, setIsSearching] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [news, setNews] = useState([]); // State for news articles
-    
+    const [mediaPreview, setMediaPreview] = useState([]);
+
     const { user } = useContext(UserContext);
 
     // Base URL for your Django backend
@@ -88,8 +89,23 @@ const Blog = () => {
     };
 
     const handleMediaChange = (e) => {
-        setMedia([...e.target.files]);
+        const files = Array.from(e.target.files);
+        setMedia(files);
+        
+        // Create preview URLs for the selected files
+        const previews = files.map(file => ({
+            url: URL.createObjectURL(file),
+            type: file.type.startsWith('video/') ? 'video' : 'image'
+        }));
+        setMediaPreview(previews);
     };
+
+    // Clean up preview URLs when component unmounts
+    useEffect(() => {
+        return () => {
+            mediaPreview.forEach(preview => URL.revokeObjectURL(preview.url));
+        };
+    }, [mediaPreview]);
 
     const handleCreateBlog = async (e) => {
         e.preventDefault();
@@ -399,50 +415,109 @@ const Blog = () => {
                         <button 
                             className={`fab ${isFormOpen ? 'fab-close' : ''}`}
                             onClick={() => setIsFormOpen(!isFormOpen)}
+                            aria-label="Create new post"
                         >
                             {isFormOpen ? '×' : '+'}
                         </button>
                         {isFormOpen && (
-                            <form className="create-blog-form" onSubmit={handleCreateBlog}>
-                                <h3>Create New Post</h3>
-                                <input
-                                    type="text"
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="Post Title"
-                                    required
-                                    maxLength={200}  // Add a reasonable max length
-                                />
-                                <textarea
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    placeholder="Write your content here..."
-                                    required
-                                    maxLength={5000}  // Add a reasonable max content length
-                                />
-                                <div>
-                                    <label>Upload Images/Videos:</label>
-                                    <input 
-                                        type="file"
-                                        accept="image/*,video/*"
-                                        multiple
-                                        onChange={handleMediaChange}
-                                    />
-                                    <small>{media.length} file(s) selected</small>
-                                </div>
-                                <div className="form-actions">
-                                    <button 
-                                        type="button" 
-                                        className="fab-close"
-                                        onClick={() => setIsFormOpen(false)}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button type="submit" className="fab">
-                                        Publish
-                                    </button>
-                                </div>
-                            </form>
+                            <div className="modal-overlay">
+                                <form className="create-blog-form" onSubmit={handleCreateBlog}>
+                                    <div className="form-header">
+                                        <button 
+                                            type="button"
+                                            className="close-button"
+                                            onClick={() => setIsFormOpen(false)}
+                                        >
+                                            ×
+                                        </button>
+                                        <h3>Create Post</h3>
+                                    </div>
+                                    <div className="form-content">
+                                        <div className="user-info">
+                                            <div className="avatar">
+                                                {user.username[0].toUpperCase()}
+                                            </div>
+                                            <span className="username">{user.username}</span>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={title}
+                                            onChange={(e) => setTitle(e.target.value)}
+                                            placeholder="Post Title"
+                                            required
+                                            maxLength={200}
+                                            className="title-input"
+                                        />
+                                        <textarea
+                                            value={content}
+                                            onChange={(e) => setContent(e.target.value)}
+                                            placeholder="What's on your mind?"
+                                            required
+                                            maxLength={5000}
+                                            className="content-input"
+                                        />
+                                        <div className="media-upload-section">
+                                            <div className="media-upload">
+                                                <label className="media-label">
+                                                    <i className="far fa-image"></i>
+                                                    <input 
+                                                        type="file"
+                                                        accept="image/*,video/*"
+                                                        multiple
+                                                        onChange={handleMediaChange}
+                                                        className="media-input"
+                                                    />
+                                                    Add photos/videos
+                                                </label>
+                                                {media.length > 0 && (
+                                                    <span className="media-count">
+                                                        {media.length} file(s) selected
+                                                    </span>
+                                                )}
+                                            </div>
+                                            
+                                            {mediaPreview.length > 0 && (
+                                                <div className="media-preview-grid">
+                                                    {mediaPreview.map((file, index) => (
+                                                        <div key={index} className="preview-item">
+                                                            <button 
+                                                                className="remove-media"
+                                                                onClick={() => {
+                                                                    setMediaPreview(prev => prev.filter((_, i) => i !== index));
+                                                                    setMedia(prev => prev.filter((_, i) => i !== index));
+                                                                }}
+                                                            >
+                                                                ×
+                                                            </button>
+                                                            {file.type === 'video' ? (
+                                                                <video controls className="preview-content">
+                                                                    <source src={file.url} type="video/mp4" />
+                                                                    Your browser does not support videos.
+                                                                </video>
+                                                            ) : (
+                                                                <img 
+                                                                    src={file.url} 
+                                                                    alt={`Preview ${index + 1}`}
+                                                                    className="preview-content"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="form-footer">
+                                        <button 
+                                            type="submit" 
+                                            className="publish-button"
+                                            disabled={!title.trim() || !content.trim()}
+                                        >
+                                            Post
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         )}
                     </>
                 )}

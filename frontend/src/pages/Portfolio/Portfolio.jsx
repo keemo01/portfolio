@@ -6,6 +6,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { FaCoins, FaExchangeAlt, FaChartLine, FaWallet } from 'react-icons/fa';
 import './Portfolio.css';  
 import PortfolioChart from '../../components/Chart/PortfolioChart';
+import AssetAllocationChart from '../../components/Chart/AssetAllocationChart';
 
 const Portfolio = () => {
   const { user } = useContext(UserContext);  // Get user context
@@ -240,6 +241,39 @@ const Portfolio = () => {
       setSavingKeys(false);
     }
   };
+
+  // New useEffect to open a WebSocket connection for real-time updates.
+  useEffect(() => {
+    const ws = new WebSocket("ws://127.0.0.1:8000/ws/portfolio/");
+    
+    ws.onopen = () => {
+      console.log("WebSocket connection established for portfolio updates");
+    };
+
+    ws.onmessage = (message) => {
+      try {
+        const data = JSON.parse(message.data);
+        // Assuming the server sends portfolio updates in the message
+        if(data.portfolio) {
+          // Optionally sort or process the incoming data before updating state
+          setPortfolioData(data.portfolio);
+        }
+        if(data.total_value) {
+          setTotalValue(data.total_value);
+        }
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
 
   // Return nothing if no user is logged in
   if (!user) return null;

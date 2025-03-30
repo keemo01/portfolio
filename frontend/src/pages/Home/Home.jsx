@@ -1,37 +1,136 @@
 import React, { useContext, useEffect, useState } from 'react';
 import './Home.css';
 import { CoinContext } from '../../context/CoinContext';
+import { AuthContext } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
+import Portfolio from '../../assets/portfolio.png';
 
 const Home = () => {
-  // Use the CoinContext to retrieve all coins and currency information.
   const { allCoin, currency } = useContext(CoinContext);
+  const { user } = useContext(AuthContext);
+  
+  // State to store dynamic conversion rates (base USD)
+  const [conversionRates, setConversionRates] = useState({
+    USD: 1,
+    GBP: 1,
+    EUR: 1
+  });
 
-  // State variables
-  const [displayCoin, setDisplayCoin] = useState([]); // Holds coins for display (all or filtered)
-  const [input, setInput] = useState(''); // Stores user search input
+  // Mapping from currency symbols to their respective currency codes
+  const currencyMap = {
+    '$': 'USD',
+    '£': 'GBP',
+    '€': 'EUR'
+  };
 
-  // Respond to input from users in the search bar
+  // Fetch real-world conversion rates from an external API
+  useEffect(() => {
+    const fetchConversionRates = async () => {
+      try {
+        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        const data = await response.json();
+        setConversionRates({
+          USD: 1,
+          GBP: data.rates.GBP,
+          EUR: data.rates.EUR
+        });
+      } catch (error) {
+        console.error("Error fetching conversion rates:", error);
+      }
+    };
+    fetchConversionRates();
+  }, []);
+
+  // Convert a price in USD to the selected currency using real-time rates
+  const convertPrice = (priceInUSD) => {
+    const rate = conversionRates[currencyMap[currency.symbol]] || 1;
+    const converted = parseFloat(priceInUSD) * rate;
+    return converted.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  // State variables for coins and market data
+  const [displayCoin, setDisplayCoin] = useState([]);
+  const [input, setInput] = useState('');
+  const [activeTab, setActiveTab] = useState('hot');
+  const [marketData, setMarketData] = useState([]);
+
+  // Fetch data from Bybit
+  const fetchBybitData = async () => {
+    try {
+      const response = await fetch('https://api.bybit.com/v5/market/tickers?category=spot');
+      const data = await response.json();
+      if (data.result && data.result.list) {
+        return data.result.list.filter(coin => coin.symbol.endsWith('USDT'));
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching Bybit data:', error);
+      return [];
+    }
+  };
+
+  // Update market data based on the selected tab, with conversion applied where needed
+  const updateMarketData = async (tab) => {
+    const bybitData = await fetchBybitData();
+    let sortedData = [...bybitData];
+    
+    switch(tab) {
+      case 'hot':
+        sortedData.sort((a, b) => parseFloat(b.turnover24h) - parseFloat(a.turnover24h));
+        break;
+      case 'new':
+        // For new pairs, you might decide on a different sorting strategy.
+        break;
+      case 'gainers':
+        sortedData.sort((a, b) => parseFloat(b.price24hPcnt) - parseFloat(a.price24hPcnt));
+        break;
+      case 'losers':
+        sortedData.sort((a, b) => parseFloat(a.price24hPcnt) - parseFloat(b.price24hPcnt));
+        break;
+      default:
+        break;
+    }
+    return sortedData.slice(0, 10); // Show top 10 results
+  };
+
+  const handleTabClick = async (tab) => {
+    setActiveTab(tab);
+    const data = await updateMarketData(tab);
+    setMarketData(data);
+  };
+
+  useEffect(() => {
+    handleTabClick('hot');
+  }, []);
+
+  // Update market data when the currency changes
+  useEffect(() => {
+    if (marketData.length > 0) {
+      handleTabClick(activeTab);
+    }
+  }, [currency]);
+
+  // Handle search input changes
   const inputHandler = (event) => {
     setInput(event.target.value);
-    // If empty input, show all coins
     if (event.target.value === "") {
       setDisplayCoin(allCoin);
     }
   };
 
-  // Handles the search submission
+  // Handle search submission
   const searchHandler = async (event) => {
     event.preventDefault();
-    // Filter the coins based on name search (lowercase letter)
-    const coins = await allCoin.filter((item) =>
+    const coins = allCoin.filter((item) =>
       item.name.toLowerCase().includes(input.toLowerCase())
     );
-    // Update displayed coins with filtered results
     setDisplayCoin(coins);
   };
 
-  // Update displayed coins when allCoin data changes (e.g., on initial render)
+  // Update display coins when allCoin changes
   useEffect(() => {
     setDisplayCoin(allCoin);
   }, [allCoin]);
@@ -41,20 +140,29 @@ const Home = () => {
       <div className="hero">
         <h1>Newest<br /> Crypto Website</h1>
         <p>
-          Offering latest news, Access to bots, up-to-date prices, 
-          and information on Crypto Projects
+          Offering the latest news, access to bots, up-to-date prices, 
+          and information on Crypto Projects.
         </p>
+        {!user && (
+          <div className="cta-container">
+            <Link to="/signup" className="cta-button">
+              Join the community & track your portfolio!
+            </Link>
+            <p className="cta-subtext">
+              Start sharing your crypto insights today.
+            </p>
+          </div>
+        )}
         <form onSubmit={searchHandler}>
           <input
             onChange={inputHandler}
             list="coinlist"
             value={input}
             type="text"
-            placeholder="Search for Crypto.."
+            placeholder="Search for Crypto..."
             required
           />
           <datalist id="coinlist">
-            {/* List of coin names for suggestions */}
             {allCoin.map((item, index) => (
               <option key={index} value={item.name} />
             ))}
@@ -62,40 +170,91 @@ const Home = () => {
           <button type="submit">Search</button>
         </form>
       </div>
-      <div className="crypto-table">
-        {/* Table Headers */}
-        <div className="table-layout header-row">
-          <p>#</p>
-          <p>Coins</p>
-          <p>Price</p>
-          <p style={{ textAlign: "center" }}>24H Change</p>
-          <p className="market-cap">Market Cap</p>
+
+      <div className="market-overview">
+        <div className="market-tabs">
+          <button 
+            className={`tab-button ${activeTab === 'hot' ? 'active' : ''}`}
+            onClick={() => handleTabClick('hot')}
+          >
+            Hot 🔥
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'new' ? 'active' : ''}`}
+            onClick={() => handleTabClick('new')}
+          >
+            New 🆕
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'gainers' ? 'active' : ''}`}
+            onClick={() => handleTabClick('gainers')}
+          >
+            Gainers 📈
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'losers' ? 'active' : ''}`}
+            onClick={() => handleTabClick('losers')}
+          >
+            Losers 📉
+          </button>
         </div>
 
-        {/* Render only the first 10 coins */}
-        {displayCoin.slice(0, 10).map((coin, index) => (
-          <Link to={`/coin/${coin.id}`} className="table-layout" key={index}>
-            <p>{coin.market_cap_rank}</p> {/* Rank */}
-            <div>
-              <img src={coin.image} alt={`${coin.name} logo`} />
-              <p>{coin.name + " - " + coin.symbol}</p> {/* Name, Symbol, and Logo */}
-            </div>
-            <p>
-              {currency.symbol} {coin.current_price.toLocaleString()} {/* Dynamic Currency Symbol */}
-            </p> {/* Price */}
-            <p
-              style={{
-                textAlign: "center",
-                color: coin.price_change_percentage_24h < 0 ? "red" : "green",
-              }}
-            >
-              {coin.price_change_percentage_24h?.toFixed(2)}%
-            </p> {/* 24H Change */}
-            <p className="market-cap">
-              {currency.symbol} {coin.market_cap.toLocaleString()} {/* Dynamic Currency Symbol */}
-            </p> {/* Market Cap */}
-          </Link>
-        ))}
+        <table className="market-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Pair</th>
+              <th>Price ({currency.symbol})</th>
+              <th>24h Change</th>
+              <th>24h Volume ({currency.symbol})</th>
+            </tr>
+          </thead>
+          <tbody>
+            {marketData.map((coin, index) => (
+              <tr key={coin.symbol}>
+                <td>{index + 1}</td>
+                <td>
+                  <Link to={`/coin/${coin.symbol}`} className="table-link">
+                    <div className="coin-cell">
+                      <span className="coin-symbol">{coin.symbol.replace('USDT', '')}</span>
+                      <span className="coin-pair">/USDT</span>
+                    </div>
+                  </Link>
+                </td>
+                <td>{convertPrice(coin.lastPrice)}</td>
+                <td className={parseFloat(coin.price24hPcnt) < 0 ? 'price-down' : 'price-up'}>
+                  {(parseFloat(coin.price24hPcnt) * 100).toFixed(2)}%
+                </td>
+                <td>{convertPrice(coin.turnover24h)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div> {/* End of market-overview */}
+      
+      {/*Download App Section */}
+      <div className="download-section">
+        <h2>Track easily on the go. Anywhere, anytime.</h2>
+        <p>Scan to Download App</p>
+        <img src={Portfolio} alt="Download App" />
+        <p>Available on iOS, Android, MacOS, Windows, and Linux.</p>
+      </div>
+
+      {/* FAQ Section */}
+      <div className="faq-section">
+        <h2>Frequently Asked Questions</h2>
+        <div className="faq-item">
+          <h3>What is this app about?</h3>
+          <p>This app provides real-time crypto market data and news updates.</p>
+        </div>
+        <div className="faq-item">
+          <h3>How do I download the app?</h3>
+          <p>Simply scan the QR code above or visit our download page from the website.</p>
+        </div>
+        <div className="faq-item">
+          <h3>Which platforms are supported?</h3>
+          <p>iOS, Android, MacOS, Windows, and Linux.</p>
+        </div>
       </div>
     </div>
   );
