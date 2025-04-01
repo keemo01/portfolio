@@ -23,11 +23,14 @@ class AuthenticationTests(TestCase):
         )
         self.user.save()
 
-        # Generate an authentication token for the user
-        self.token = Token.objects.create(user=self.user)
-
-        # Attach the token to all API requests
-        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        # Obtain JWT access token from renamed login endpoint:
+        response = self.client.post(reverse("login"), {
+            "username": "testuser",
+            "password": "testpassword123"
+        }, format="json")
+        self.access_token = response.data.get('token')
+        self.refresh_token = response.data.get('refresh_token', '')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
 
         # Debugging: Make sure the user and token are created
         print("Test User Created:", User.objects.count())
@@ -35,13 +38,18 @@ class AuthenticationTests(TestCase):
 
     def test_signup(self):
         """Make sure new users can sign up and get a token."""
+        # Remove credentials so that signup works for anonymous users
+        self.client.credentials()
         response = self.client.post(reverse("signup"), {
             'username': 'newuser',
             'email': 'newuser@example.com',
             'password': 'newpassword123'
         }, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # Updated assertion for JWT key name
         self.assertIn('token', response.data)
+        # Restore credentials if needed
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
 
     def test_login(self):
         """Check if an existing user can log in successfully."""
@@ -54,7 +62,7 @@ class AuthenticationTests(TestCase):
 
     def test_invalid_login(self):
         """Ensure login fails with incorrect credentials."""
-        response = self.client.post(reverse("login"), {
+        response = self.client.post(reverse("token_obtain_pair"), {
             'username': 'testuser',
             'password': 'wrongpassword'
         }, format="json")
@@ -62,13 +70,13 @@ class AuthenticationTests(TestCase):
 
     def test_logout(self):
         """Verify that logging out works as expected."""
-        response = self.client.post(reverse("logout"))
+        response = self.client.post(reverse("auth_logout"))
         print("Logout Response:", response.status_code, response.data)  # Debugging
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_token_validation(self):
         """Make sure the token validation endpoint returns the correct user."""
-        response = self.client.get(reverse("test_token"))
+        response = self.client.get(reverse("auth_token_validation"))
         print("Token Validation Response:", response.status_code, response.data)  # Debugging
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['user']['username'], 'testuser')
@@ -83,7 +91,7 @@ class AuthenticationTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Make sure the user can log in with the new password
-        login_response = self.client.post(reverse("login"), {
+        login_response = self.client.post(reverse("token_obtain_pair"), {
             'username': 'testuser',
             'password': 'newpassword456'
         }, format="json")
@@ -104,9 +112,14 @@ class PortfolioTests(TestCase):
         )
         self.user.save()
 
-        # Generates an authentication token for the user
-        self.token = Token.objects.create(user=self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        # Obtain JWT access token for this user:
+        response = self.client.post(reverse("login"), {
+            'username': 'portfoliouser',
+            'password': 'portfoliopassword'
+        }, format="json")
+        self.access_token = response.data.get('token')
+        self.refresh_token = response.data.get('refresh_token', '')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access_token}')
 
     def test_add_holding(self):
         """Check if users can add a crypto holding to their portfolio."""

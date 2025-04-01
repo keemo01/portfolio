@@ -3,13 +3,14 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Card, ButtonGroup, Button } from 'react-bootstrap';
 
 const PortfolioChart = ({ data, onRangeChange }) => {
-  const [activeRange, setActiveRange] = useState(30);
+  const [activeRange, setActiveRange] = useState(30); 
 
-  // Sort data chronologically
+  // Sort data chronologically to ensure proper chart rendering
   const sortedData = useMemo(() => {
     return [...data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   }, [data]);
 
+  // Handles range selection (7D, 30D, 90D)
   const handleRangeChange = (days) => {
     setActiveRange(days);
     onRangeChange(days);
@@ -18,6 +19,7 @@ const PortfolioChart = ({ data, onRangeChange }) => {
   return (
     <Card className="mb-4">
       <Card.Body>
+        {/* Header with range selection buttons */}
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h4>Portfolio Value Over Time</h4>
           <ButtonGroup size="sm">
@@ -41,21 +43,31 @@ const PortfolioChart = ({ data, onRangeChange }) => {
             </Button>
           </ButtonGroup>
         </div>
+
+        {/* Chart container */}
         <div style={{ width: '100%', height: 400 }}>
           <ResponsiveContainer>
             <LineChart data={sortedData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
+              
+              {/* X-axis with formatted timestamps */}
               <XAxis 
                 dataKey="timestamp" 
                 tickFormatter={(timestamp) => new Date(timestamp).toLocaleDateString()}
               />
+              
+              {/* Y-axis with currency formatting */}
               <YAxis 
                 tickFormatter={(value) => `$${value.toLocaleString()}`}
               />
+              
+              {/* Tooltip for better readability */}
               <Tooltip 
                 formatter={(value) => [`$${value.toLocaleString()}`, 'Portfolio Value']}
                 labelFormatter={(timestamp) => new Date(timestamp).toLocaleString()}
               />
+
+              {/* Line chart displaying portfolio value */}
               <Line 
                 type="monotone" 
                 dataKey="value" 

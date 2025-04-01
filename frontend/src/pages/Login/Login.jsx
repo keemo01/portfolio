@@ -4,31 +4,31 @@ import { useUser } from '../../context/UserContext';
 import './Login.css';
 
 const Login = () => {
+  // State for username, password, and error messages
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login } = useUser();
-  const navigate = useNavigate();
+
+  const { login } = useUser(); // Get the login function from context
+  const navigate = useNavigate(); // Hook for navigation
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent form from refreshing the page
+    setError(''); // Clear previous error messages
+
     try {
-      console.log('Attempting login...');
-      const response = await login({ username, password });
-      console.log('Login successful:', response);
-      navigate('/');
+      await login({ username, password }); // Attempt to log in
+      navigate('/'); // Redirect to homepage on success
     } catch (err) {
       console.error('Login error:', err);
-      // More specific error handling
-      if (err.response) {
-        // The request was made and the server responded with a status code
-        setError(err.response.data.detail || 'Login failed');
-      } else if (err.request) {
-        // The request was made but no response was received
-        setError('No response from server');
+
+      // Handle different errors
+      if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else if (err.response?.status === 401) {
+        setError('Invalid username or password');
       } else {
-        // Something happened in setting up the request
-        setError('Error during login');
+        setError('An error occurred during login. Please try again.');
       }
     }
   };
@@ -36,7 +36,10 @@ const Login = () => {
   return (
     <div className="login">
       <h2>Login</h2>
+      
+      {/* Show error message if there is one */}
       {error && <div className="error-message">{error}</div>}
+      
       <form onSubmit={handleSubmit}>
         <input
           type="text"

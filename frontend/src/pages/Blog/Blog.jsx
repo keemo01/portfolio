@@ -4,63 +4,107 @@ import axios from 'axios';
 import { UserContext } from '../../context/UserContext';
 import './Blog.css';
 
+// Constants
+const BASE_URL = 'http://127.0.0.1:8000/api';
+const NEWS_API_KEY = '7e07333e33234db8ac28e319fd52cdd4';
+
+// Helper functions
+const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+    const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+    return `${date.toLocaleDateString('en-US', dateOptions)} - ${date.toLocaleTimeString('en-US', timeOptions).replace(' ', '')}`;
+};
+
+const highlightText = (text, query) => {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, index) => 
+        part.toLowerCase() === query.toLowerCase() 
+            ? <mark key={index}>{part}</mark> 
+            : part
+    );
+};
+
 const Blog = () => {
-    const [blogs, setBlogs] = useState([]);
-    const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
-    const [media, setMedia] = useState([]);
-    const [isFormOpen, setIsFormOpen] = useState(false);
-    const [error, setError] = useState(null);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState({ users: [], blogs: [] });
-    const [isSearching, setIsSearching] = useState(false);
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const [news, setNews] = useState([]); // State for news articles
-    const [mediaPreview, setMediaPreview] = useState([]);
+    // State management
+    const [state, setState] = useState({
+        blogs: [],
+        title: '',
+        content: '',
+        media: [],
+        isFormOpen: false,
+        error: null,
+        searchQuery: '',
+        searchResults: { users: [], blogs: [] },
+        isSearching: false,
+        showSuggestions: false,
+        news: [],
+        mediaPreview: [],
+        isLoading: true
+    });
 
     const { user } = useContext(UserContext);
 
-    // Base URL for your Django backend
-    const BASE_URL = 'http://127.0.0.1:8000/api';
-
-    useEffect(() => {
-        fetchBlogs();
-        fetchNews(); // Fetch news articles
-    }, []);
+    // API calls
+    const fetchData = async () => {
+        try {
+            await Promise.all([fetchBlogs(), fetchNews()]);
+        } catch (error) {
+            setState(prev => ({
+                ...prev,
+                error: 'Failed to load data. Please refresh the page.'
+            }));
+        } finally {
+            setState(prev => ({ ...prev, isLoading: false }));
+        }
+    };
 
     const fetchBlogs = async () => {
         try {
             const response = await axios.get(`${BASE_URL}/blogs/`);
-            setBlogs(response.data);
+            setState(prev => ({ ...prev, blogs: response.data }));
         } catch (error) {
             console.error('Error fetching blogs:', error);
-            setError('Unable to fetch blogs. Please try again later.');
+            throw error;
         }
     };
 
-    // Fetch news articles from the News API
     const fetchNews = async () => {
         try {
             const response = await axios.get('https://newsapi.org/v2/everything', {
                 params: {
-                    apiKey: '7e07333e33234db8ac28e319fd52cdd4',
+                    apiKey: NEWS_API_KEY,
                     q: 'cryptocurrency OR bitcoin OR crypto',
                     language: 'en',
                     sortBy: 'publishedAt',
                     pageSize: 5
                 }
             });
-    
-            if (response.data && response.data.articles) {
-                setNews(response.data.articles.slice(0, 10)); // Limit to 10 articles
-            } else {
-                console.error('No news results found');
-                setNews([]);
-            }
+            
+            setState(prev => ({
+                ...prev,
+                news: response.data?.articles?.slice(0, 10) || []
+            }));
         } catch (error) {
-            console.error('Error fetching crypto news:', error.response?.data || error.message);
-            setNews([]); // Set to empty array on error
+            console.error('Error fetching news:', error);
+            throw error;
         }
+    };
+
+    // Event handlers
+    const handleMediaChange = (e) => {
+        const files = Array.from(e.target.files);
+        const previews = files.map(file => ({
+            url: URL.createObjectURL(file),
+            type: file.type.startsWith('video/') ? 'video' : 'image'
+        }));
+        
+        setState(prev => ({
+            ...prev,
+            media: files,
+            mediaPreview: previews
+        }));
     };
 
     const handleDeleteBlog = async (blogId) => {
@@ -76,45 +120,35 @@ const Blog = () => {
                 },
             });
             // Remove the deleted blog from the local state
-            setBlogs(blogs.filter(blog => blog.id !== blogId));
+            setState(prev => ({
+                ...prev,
+                blogs: prev.blogs.filter(blog => blog.id !== blogId)
+            }));
         } catch (error) {
             console.error('Error deleting blog:', error);
             
             if (error.response && error.response.status === 403) {
-                setError('You can only delete your own blog posts.');
+                setState(prev => ({
+                    ...prev,
+                    error: 'You can only delete your own blog posts.'
+                }));
             } else {
-                setError('Unable to delete blog. Please try again.');
+                setState(prev => ({
+                    ...prev,
+                    error: 'Unable to delete blog. Please try again.'
+                }));
             }
         }
     };
-
-    const handleMediaChange = (e) => {
-        const files = Array.from(e.target.files);
-        setMedia(files);
-        
-        // Create preview URLs for the selected files
-        const previews = files.map(file => ({
-            url: URL.createObjectURL(file),
-            type: file.type.startsWith('video/') ? 'video' : 'image'
-        }));
-        setMediaPreview(previews);
-    };
-
-    // Clean up preview URLs when component unmounts
-    useEffect(() => {
-        return () => {
-            mediaPreview.forEach(preview => URL.revokeObjectURL(preview.url));
-        };
-    }, [mediaPreview]);
 
     const handleCreateBlog = async (e) => {
         e.preventDefault();
         
         const formData = new FormData();
-        formData.append('title', title.trim());
-        formData.append('content', content.trim());
+        formData.append('title', state.title.trim());
+        formData.append('content', state.content.trim());
     
-        media.forEach((file, index) => {
+        state.media.forEach((file, index) => {
             formData.append('media', file);
         });
     
@@ -127,98 +161,110 @@ const Blog = () => {
             });
             
             // Reset form state
-            setTitle('');
-            setContent('');
-            setMedia([]);
-            setIsFormOpen(false);
+            setState(prev => ({
+                ...prev,
+                title: '',
+                content: '',
+                media: [],
+                isFormOpen: false
+            }));
             fetchBlogs();
         } catch (error) {
             console.error('Error creating blog:', error.response?.data || error.message);
-            setError('Unable to create blog. Please check your input and try again.');
+            setState(prev => ({
+                ...prev,
+                error: 'Unable to create blog. Please check your input and try again.'
+            }));
         }
-    };
-
-    const formatDateTime = (dateString) => {
-        const date = new Date(dateString);
-        return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(' ', '')}`;
-    };
-
-    const highlightText = (text, query) => {
-        if (!query) return text;
-        const parts = text.split(new RegExp(`(${query})`, 'gi'));
-        return parts.map((part, index) => 
-            part.toLowerCase() === query.toLowerCase() 
-                ? <mark key={index}>{part}</mark> 
-                : part
-        );
     };
 
     const handleSearch = async (query) => {
-        setSearchQuery(query);
-        setShowSuggestions(query.length > 0);
+        setState(prev => ({
+            ...prev,
+            searchQuery: query,
+            showSuggestions: query.length > 0
+        }));
         
         if (!query.trim()) {
-            setIsSearching(false);
-            setSearchResults({ users: [], blogs: [] });
+            setState(prev => ({
+                ...prev,
+                isSearching: false,
+                searchResults: { users: [], blogs: [] }
+            }));
             return;
         }
 
-        setIsSearching(true);
+        setState(prev => ({ ...prev, isSearching: true }));
         try {
             const response = await axios.get(`${BASE_URL}/api/search/?q=${query}`);
-            setSearchResults({
-                users: response.data.users || [],
-                blogs: response.data.blogs || []
-            });
+            setState(prev => ({
+                ...prev,
+                searchResults: {
+                    users: response.data.users || [],
+                    blogs: response.data.blogs || []
+                }
+            }));
         } catch (error) {
             console.error('Search error:', error);
-            setError('Search failed. Please try again.');
+            setState(prev => ({
+                ...prev,
+                error: 'Search failed. Please try again.'
+            }));
         }
     };
 
     // Delay search while typing
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            handleSearch(searchQuery);
+            handleSearch(state.searchQuery);
         }, 500);
         return () => clearTimeout(timeoutId);
-    }, [searchQuery]);
+    }, [state.searchQuery]);
 
-    const filteredBlogs = blogs.filter(blog => 
-        blog.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        blog.content.toLowerCase().includes(searchQuery.toLowerCase())
+    useEffect(() => {
+        fetchData();
+        return () => {
+            state.mediaPreview.forEach(preview => URL.revokeObjectURL(preview.url));
+        };
+    }, []);
+
+    const filteredBlogs = state.blogs.filter(blog => 
+        blog.title.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+        blog.content.toLowerCase().includes(state.searchQuery.toLowerCase())
     );
 
     return (
         <div className="blog-container">
             <div className="main-content">
-                <h1>Cryptonia Blog</h1>
+                <h1>
+                    {!state.isLoading && user ? `Welcome ${user.username}` : 'Welcome'}
+                </h1>
 
                 <div className="search-container">
                     <input
                         type="text"
                         className="search-input"
                         placeholder="Search posts and users..."
-                        value={searchQuery}
+                        value={state.searchQuery}
                         onChange={(e) => handleSearch(e.target.value)}
-                        onFocus={() => setShowSuggestions(true)}
+                        onFocus={() => setState(prev => ({ ...prev, showSuggestions: true }))}
                     />
                     
-                    {showSuggestions && searchQuery && (
+                    {state.showSuggestions && state.searchQuery && (
                         <div className="search-suggestions">
                             {/* Users suggestions */}
-                            {searchResults.users?.length > 0 && (
+                            {state.searchResults.users?.length > 0 && (
                                 <div className="suggestion-section">
                                     <h4>Users</h4>
-                                    {searchResults.users.slice(0, 3).map(user => (
+                                    {state.searchResults.users.slice(0, 3).map(user => (
                                         <Link 
                                             to={`/profile/${user.id}`} 
                                             key={user.id} 
                                             className="suggestion-item"
-                                            onClick={() => setShowSuggestions(false)}
+                                            onClick={() => setState(prev => ({ ...prev, showSuggestions: false }))}
                                         >
                                             <span className="username">
-                                                {highlightText(user.username, searchQuery)}
+                                                {highlightText(user.username, state.searchQuery)}
                                             </span>
                                             {user.email && (
                                                 <span className="email">{user.email}</span>
@@ -229,18 +275,18 @@ const Blog = () => {
                             )}
 
                             {/* Blog suggestions */}
-                            {searchResults.blogs?.length > 0 && (
+                            {state.searchResults.blogs?.length > 0 && (
                                 <div className="suggestion-section">
                                     <h4>Posts</h4>
-                                    {searchResults.blogs.slice(0, 3).map(blog => (
+                                    {state.searchResults.blogs.slice(0, 3).map(blog => (
                                         <Link 
                                             to={`/blog/${blog.id}`} 
                                             key={blog.id} 
                                             className="suggestion-item"
-                                            onClick={() => setShowSuggestions(false)}
+                                            onClick={() => setState(prev => ({ ...prev, showSuggestions: false }))}
                                         >
                                             <span className="blog-title">
-                                                {highlightText(blog.title, searchQuery)}
+                                                {highlightText(blog.title, state.searchQuery)}
                                             </span>
                                         </Link>
                                     ))}
@@ -251,21 +297,21 @@ const Blog = () => {
                 </div>
 
                 {/* Search Results */}
-                {searchQuery && (
+                {state.searchQuery && (
                     <div className="search-results">
                         {/* Users Section */}
-                        {searchResults.users && searchResults.users.length > 0 && (
+                        {state.searchResults.users && state.searchResults.users.length > 0 && (
                             <div className="search-section">
                                 <h3>Users</h3>
                                 <div className="users-list">
-                                    {searchResults.users.map(user => (
+                                    {state.searchResults.users.map(user => (
                                         <Link 
                                             to={`/profile/${user.id}`} 
                                             key={user.id} 
                                             className="user-result"
                                         >
                                             <div className="user-item">
-                                                <span className="username">{highlightText(user.username, searchQuery)}</span>
+                                                <span className="username">{highlightText(user.username, state.searchQuery)}</span>
                                                 {user.email && (
                                                     <span className="email">{user.email}</span>
                                                 )}
@@ -277,15 +323,15 @@ const Blog = () => {
                         )}
 
                         {/* Posts Section */}
-                        {searchResults.blogs && searchResults.blogs.length > 0 && (
+                        {state.searchResults.blogs && state.searchResults.blogs.length > 0 && (
                             <div className="search-section">
                                 <h3>Posts</h3>
                                 <div className="blog-posts search-posts">
-                                    {searchResults.blogs.map(blog => (
+                                    {state.searchResults.blogs.map(blog => (
                                         <div className="blog-post" key={blog.id}>
                                             <div className="post-header">
                                                 <Link to={`/blog/${blog.id}`} className="post-title-link">
-                                                    <h3>{highlightText(blog.title, searchQuery)}</h3>
+                                                    <h3>{highlightText(blog.title, state.searchQuery)}</h3>
                                                 </Link>
                                                 {/* Delete button only available for the blog author */}
                                                 {user && user.username === blog.author && (
@@ -331,7 +377,7 @@ const Blog = () => {
                             </div>
                         )}
 
-                        {(!searchResults.users?.length && !searchResults.blogs?.length) && (
+                        {(!state.searchResults.users?.length && !state.searchResults.blogs?.length) && (
                             <div className="no-results">
                                 No matching users or posts found
                             </div>
@@ -340,11 +386,11 @@ const Blog = () => {
                 )}
 
                 {/* Regular Blog Posts Section */}
-                {!searchQuery && (
+                {!state.searchQuery && (
                     <div className="blog-posts">
                         {filteredBlogs.length === 0 ? (
                             <div className="empty-state">
-                                {searchQuery ? "No matching posts found" : "No blog posts found"}
+                                {state.searchQuery ? "No matching posts found" : "No blog posts found"}
                             </div>
                         ) : (
                             filteredBlogs.map((blog) => (
@@ -404,29 +450,29 @@ const Blog = () => {
                     </div>
                 )}
 
-                {error && (
+                {state.error && (
                     <div className="error-message" style={{color: 'red', marginBottom: '10px'}}>
-                        {error}
+                        {state.error}
                     </div>
                 )}
 
                 {user && (
                     <>
                         <button 
-                            className={`fab ${isFormOpen ? 'fab-close' : ''}`}
-                            onClick={() => setIsFormOpen(!isFormOpen)}
+                            className={`fab ${state.isFormOpen ? 'fab-close' : ''}`}
+                            onClick={() => setState(prev => ({ ...prev, isFormOpen: !prev.isFormOpen }))}
                             aria-label="Create new post"
                         >
-                            {isFormOpen ? '×' : '+'}
+                            {state.isFormOpen ? '×' : '+'}
                         </button>
-                        {isFormOpen && (
+                        {state.isFormOpen && (
                             <div className="modal-overlay">
                                 <form className="create-blog-form" onSubmit={handleCreateBlog}>
                                     <div className="form-header">
                                         <button 
                                             type="button"
                                             className="close-button"
-                                            onClick={() => setIsFormOpen(false)}
+                                            onClick={() => setState(prev => ({ ...prev, isFormOpen: false }))}
                                         >
                                             ×
                                         </button>
@@ -435,22 +481,22 @@ const Blog = () => {
                                     <div className="form-content">
                                         <div className="user-info">
                                             <div className="avatar">
-                                                {user.username[0].toUpperCase()}
+                                                {user && user.username ? user.username[0].toUpperCase() : ''}
                                             </div>
-                                            <span className="username">{user.username}</span>
+                                            <span className="username">{user?.username}</span>
                                         </div>
                                         <input
                                             type="text"
-                                            value={title}
-                                            onChange={(e) => setTitle(e.target.value)}
+                                            value={state.title}
+                                            onChange={(e) => setState(prev => ({ ...prev, title: e.target.value }))}
                                             placeholder="Post Title"
                                             required
                                             maxLength={200}
                                             className="title-input"
                                         />
                                         <textarea
-                                            value={content}
-                                            onChange={(e) => setContent(e.target.value)}
+                                            value={state.content}
+                                            onChange={(e) => setState(prev => ({ ...prev, content: e.target.value }))}
                                             placeholder="What's on your mind?"
                                             required
                                             maxLength={5000}
@@ -469,22 +515,25 @@ const Blog = () => {
                                                     />
                                                     Add photos/videos
                                                 </label>
-                                                {media.length > 0 && (
+                                                {state.media.length > 0 && (
                                                     <span className="media-count">
-                                                        {media.length} file(s) selected
+                                                        {state.media.length} file(s) selected
                                                     </span>
                                                 )}
                                             </div>
                                             
-                                            {mediaPreview.length > 0 && (
+                                            {state.mediaPreview.length > 0 && (
                                                 <div className="media-preview-grid">
-                                                    {mediaPreview.map((file, index) => (
+                                                    {state.mediaPreview.map((file, index) => (
                                                         <div key={index} className="preview-item">
                                                             <button 
                                                                 className="remove-media"
                                                                 onClick={() => {
-                                                                    setMediaPreview(prev => prev.filter((_, i) => i !== index));
-                                                                    setMedia(prev => prev.filter((_, i) => i !== index));
+                                                                    setState(prev => ({
+                                                                        ...prev,
+                                                                        mediaPreview: prev.mediaPreview.filter((_, i) => i !== index),
+                                                                        media: prev.media.filter((_, i) => i !== index)
+                                                                    }));
                                                                 }}
                                                             >
                                                                 ×
@@ -511,7 +560,7 @@ const Blog = () => {
                                         <button 
                                             type="submit" 
                                             className="publish-button"
-                                            disabled={!title.trim() || !content.trim()}
+                                            disabled={!state.title.trim() || !state.content.trim()}
                                         >
                                             Post
                                         </button>
@@ -524,7 +573,7 @@ const Blog = () => {
             </div>
             <div className="news-container">
                 <h2>Latest News</h2>
-                {news.map((article, index) => (
+                {state.news.map((article, index) => (
                     <div key={index} className="news-item">
                         <a href={article.url} target="_blank" rel="noopener noreferrer">
                             <h4>{article.title}</h4>

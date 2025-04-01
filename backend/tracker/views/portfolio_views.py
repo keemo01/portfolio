@@ -173,7 +173,7 @@ def portfolio(request):
         print(f"Found API keys for {user.username}")
     except APIKey.DoesNotExist:
         return Response({
-            'detail': 'Please add your API keys in profile settings first',
+            'detail': 'Need to add API keys in portfolio settings',
             'has_api_keys': False
         }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -269,7 +269,7 @@ def portfolio(request):
     total_value = sum(item['current_value'] for item in portfolio_data)
     
     # Save historical data point
-    if portfolio_data:  # Only save if we have data
+    if portfolio_data:  # Only save if theres data
         PortfolioHistory.objects.create(
             user=user,
             total_value=total_value,

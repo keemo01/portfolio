@@ -9,21 +9,21 @@ const Home = () => {
   const { allCoin, currency } = useContext(CoinContext);
   const { user } = useContext(AuthContext);
   
-  // State to store dynamic conversion rates (base USD)
+  // I'm keeping dynamic conversion rates (base USD)
   const [conversionRates, setConversionRates] = useState({
     USD: 1,
     GBP: 1,
     EUR: 1
   });
 
-  // Mapping from currency symbols to their respective currency codes
+  // I associate currency symbols with their codes
   const currencyMap = {
     '$': 'USD',
     '£': 'GBP',
     '€': 'EUR'
   };
 
-  // Fetch real-world conversion rates from an external API
+  // Fetching real-world conversion rates from an API
   useEffect(() => {
     const fetchConversionRates = async () => {
       try {
@@ -41,7 +41,7 @@ const Home = () => {
     fetchConversionRates();
   }, []);
 
-  // Convert a price in USD to the selected currency using real-time rates
+  // Convert a USD price using real-world rates
   const convertPrice = (priceInUSD) => {
     const rate = conversionRates[currencyMap[currency.symbol]] || 1;
     const converted = parseFloat(priceInUSD) * rate;
@@ -51,13 +51,13 @@ const Home = () => {
     });
   };
 
-  // State variables for coins and market data
+  // Setting up state for coins and market data
   const [displayCoin, setDisplayCoin] = useState([]);
   const [input, setInput] = useState('');
   const [activeTab, setActiveTab] = useState('hot');
   const [marketData, setMarketData] = useState([]);
 
-  // Fetch data from Bybit
+  // fetch data from Bybit
   const fetchBybitData = async () => {
     try {
       const response = await fetch('https://api.bybit.com/v5/market/tickers?category=spot');
@@ -72,7 +72,7 @@ const Home = () => {
     }
   };
 
-  // Update market data based on the selected tab, with conversion applied where needed
+  // I update market data based on the chosen tab applying conversion as needed
   const updateMarketData = async (tab) => {
     const bybitData = await fetchBybitData();
     let sortedData = [...bybitData];
@@ -106,7 +106,7 @@ const Home = () => {
     handleTabClick('hot');
   }, []);
 
-  // Update market data when the currency changes
+  // Refresh market data when the currency changes
   useEffect(() => {
     if (marketData.length > 0) {
       handleTabClick(activeTab);
@@ -121,7 +121,7 @@ const Home = () => {
     }
   };
 
-  // Handle search submission
+  // Process search submissions
   const searchHandler = async (event) => {
     event.preventDefault();
     const coins = allCoin.filter((item) =>
@@ -130,7 +130,7 @@ const Home = () => {
     setDisplayCoin(coins);
   };
 
-  // Update display coins when allCoin changes
+  // Display coins when allCoin changes
   useEffect(() => {
     setDisplayCoin(allCoin);
   }, [allCoin]);
@@ -232,7 +232,7 @@ const Home = () => {
         </table>
       </div> {/* End of market-overview */}
       
-      {/*Download App Section */}
+      {/* Download app section */}
       <div className="download-section">
         <h2>Track easily on the go. Anywhere, anytime.</h2>
         <p>Scan to Download App</p>
@@ -240,7 +240,7 @@ const Home = () => {
         <p>Available on iOS, Android, MacOS, Windows, and Linux.</p>
       </div>
 
-      {/* FAQ Section */}
+      {/* FAQ section */}
       <div className="faq-section">
         <h2>Frequently Asked Questions</h2>
         <div className="faq-item">

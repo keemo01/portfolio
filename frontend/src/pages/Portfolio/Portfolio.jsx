@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { UserContext } from '../../context/UserContext';
+import { useUser } from '../../context/UserContext';
 import { Container, Card, Row, Col, Alert, Spinner, Modal, Form, Button, Badge } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaCoins, FaExchangeAlt, FaChartLine, FaWallet } from 'react-icons/fa';
@@ -9,7 +9,7 @@ import PortfolioChart from '../../components/Chart/PortfolioChart';
 import AssetAllocationChart from '../../components/Chart/AssetAllocationChart';
 
 const Portfolio = () => {
-  const { user } = useContext(UserContext);  // Get user context
+  const { user } = useUser();  // Get user context
   const navigate = useNavigate();  // For navigation 
   const [portfolioData, setPortfolioData] = useState([]);  // State that stores portfolio data
   const [totalValue, setTotalValue] = useState(0);  // State that stores the total value of the portfolio
@@ -241,39 +241,6 @@ const Portfolio = () => {
       setSavingKeys(false);
     }
   };
-
-  // New useEffect to open a WebSocket connection for real-time updates.
-  useEffect(() => {
-    const ws = new WebSocket("ws://127.0.0.1:8000/ws/portfolio/");
-    
-    ws.onopen = () => {
-      console.log("WebSocket connection established for portfolio updates");
-    };
-
-    ws.onmessage = (message) => {
-      try {
-        const data = JSON.parse(message.data);
-        // Assuming the server sends portfolio updates in the message
-        if(data.portfolio) {
-          // Optionally sort or process the incoming data before updating state
-          setPortfolioData(data.portfolio);
-        }
-        if(data.total_value) {
-          setTotalValue(data.total_value);
-        }
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
-    return () => {
-      ws.close();
-    };
-  }, []);
 
   // Return nothing if no user is logged in
   if (!user) return null;

@@ -1,13 +1,14 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 
-// Base URL for your Django backend
+// Set the base URL for your Django backend API
 const BASE_URL = 'http://127.0.0.1:8000/api';
 
-// Create a context with default values
+// Creating a context that holds user-related data and functions
 const UserContext = createContext({
   user: null,
-  setUser: () => console.warn('No UserProvider found'),
+  setUser: () => {},
   loading: true,
   login: () => {},
   logout: () => {},
@@ -15,15 +16,21 @@ const UserContext = createContext({
 });
 
 const UserProvider = ({ children }) => {
-  // Initialize user state from localStorage
+  // Load user data from localStorage when the app starts
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      localStorage.removeItem('user'); // Clear invalid data if any
+      return null;
+    }
   });
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Keep track of loading state
 
-  // Axios interceptor to include JWT token in requests
+  // Add JWT token to requests if available
   useEffect(() => {
     const interceptor = axios.interceptors.request.use(
       (config) => {
@@ -36,11 +43,11 @@ const UserProvider = ({ children }) => {
       (error) => Promise.reject(error)
     );
 
-    // Cleanup interceptor on component unmount
+    // Remove the interceptor when the component is no longer in use
     return () => axios.interceptors.request.eject(interceptor);
   }, []);
 
-  // Token verification on initial load
+  // Verify the token when the app loads
   useEffect(() => {
     const verifyToken = async () => {
       const accessToken = localStorage.getItem('access_token');
@@ -50,17 +57,19 @@ const UserProvider = ({ children }) => {
       }
 
       try {
-        const response = await axios.get(`${BASE_URL}/test-token/`);
-        
-        if (response?.data) {
-          // Changed: Extract user info from response.data.user
-          setUser({
-            username: response.data.user.username,
-            email: response.data.user.email
-          });
+        const response = await axios.get(`${BASE_URL}/test-token/`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        });
+
+        if (response?.data?.status === 'success') {
+          setUser(response.data.user);
+        } else {
+          throw new Error('Invalid token');
         }
       } catch (error) {
-        console.error('Token verification error:', error);
+        console.error('Token verification failed:', error);
         logout();
       } finally {
         setLoading(false);
@@ -70,97 +79,107 @@ const UserProvider = ({ children }) => {
     verifyToken();
   }, []);
 
-  // Update localStorage when user changes
+  // Keep the localStorage synced with the user data state
   useEffect(() => {
     if (user) {
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('user', JSON.stringify(user)); // Save the user to localStorage
     } else {
-      localStorage.removeItem('user');
+      localStorage.removeItem('user'); // Remove user data if there's no user
     }
   }, [user]);
 
-  // Signup function
+  // Handle user signup
   const signup = async (userData) => {
     try {
+      console.log('Attempting signup:', { username: userData.username, email: userData.email });
       const response = await axios.post(`${BASE_URL}/signup/`, userData);
-      
-      // Store tokens
-      localStorage.setItem('access_token', response.data.access);
-      localStorage.setItem('refresh_token', response.data.refresh);
+      console.log('Signup response:', response.data);
 
-      // Set user data
-      setUser({
-        username: response.data.user.username,
-        email: response.data.user.email
-      });
+      const { access_token, refresh_token, user } = response.data;
+
+      // Store the access and refresh tokens
+      localStorage.setItem('access_token', access_token);
+      localStorage.setItem('refresh_token', refresh_token);
+
+      // Set the user data and update state
+      const userState = {
+        username: user.username,
+        email: user.email,
+        id: user.id
+      };
+
+      setUser(userState); // Update user state
+      localStorage.setItem('user', JSON.stringify(userState)); // Save user to localStorage
 
       return response.data;
     } catch (error) {
-      console.error('Signup error:', error);
+      console.error('Signup error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       throw error;
     }
   };
 
-  // Login function
+  // Handle user login
   const login = async (credentials) => {
     try {
-      // Call the default login endpoint, which returns only tokens
       const response = await axios.post(`${BASE_URL}/login/`, credentials);
-      
-      // Extract tokens (adjust keys if needed)
-      const accessToken = response.data.access || response.data.access_token;
-      const refreshToken = response.data.refresh || response.data.refresh_token;
-      
-      localStorage.setItem('access_token', accessToken);
-      localStorage.setItem('refresh_token', refreshToken);
-      
-      // After login, fetch user details from the test-token endpoint
-      const testResponse = await axios.get(`${BASE_URL}/test-token/`);
-      const userData = {
-        username: testResponse.data.user.username,
-        email: testResponse.data.user.email
+      const { access, refresh, user: userData } = response.data;
+
+      if (!access || !refresh || !userData) {
+        throw new Error('Invalid response from server');
+      }
+
+      // Store tokens in localStorage
+      localStorage.setItem('access_token', access);
+      localStorage.setItem('refresh_token', refresh);
+
+      // Set user state
+      const userState = {
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName
       };
-      
-      setUser(userData);
+
+      setUser(userState);
+      localStorage.setItem('user', JSON.stringify(userState)); // Save user to localStorage
+
       return response.data;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error:', error.response?.data || error.message);
       throw error;
     }
   };
-  
 
-  // Logout function
+  // Handle user logout
   const logout = async () => {
     try {
-      const refreshToken = localStorage.getItem('refresh_token');
-      
-      // Optional: Call backend logout endpoint
-      await axios.post(`${BASE_URL}/logout/`, { refresh_token: refreshToken });
-      
-      // Clear local storage
+      const refresh_token = localStorage.getItem('refresh_token');
+      if (refresh_token) {
+        try {
+          await axios.post(`${BASE_URL}/logout/`, { refresh_token });
+        } catch (error) {
+          console.log('Logout backend call failed, clearing local data anyway');
+        }
+      }
+    } finally {
+      // Clear tokens and user data from localStorage
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
-      
-      // Reset user state
-      setUser(null);
-    } catch (error) {
-      console.error('Logout error:', error);
-      
-      // Even if backend logout fails, clear local data
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
-      setUser(null);
+      setUser(null); // Reset the user state
     }
   };
 
-  // Token refresh mechanism
+  // Refresh the JWT token using the refresh token
   const refreshToken = async () => {
     const refreshToken = localStorage.getItem('refresh_token');
     if (!refreshToken) {
-      logout();
+      logout(); // If no refresh token, logout the user
       return null;
     }
 
@@ -169,62 +188,28 @@ const UserProvider = ({ children }) => {
         refresh: refreshToken
       });
 
+      // Save the new access token to localStorage
       localStorage.setItem('access_token', response.data.access);
       return response.data.access;
     } catch (error) {
       console.error('Token refresh error:', error);
-      logout();
+      logout(); // If refreshing fails, log the user out
       return null;
     }
   };
 
-  // Add axios response interceptor for handling token refresh
-  useEffect(() => {
-    const responseInterceptor = axios.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        const originalRequest = error.config;
-
-        // If the error is due to an unauthorized access and we haven't tried to refresh yet
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          originalRequest._retry = true;
-          
-          const newAccessToken = await refreshToken();
-          if (newAccessToken) {
-            // Retry the original request with the new token
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-            return axios(originalRequest);
-          }
-        }
-
-        return Promise.reject(error);
-      }
-    );
-
-    // Cleanup interceptor on unmount
-    return () => axios.interceptors.response.eject(responseInterceptor);
-  }, []);
-
   return (
-    <UserContext.Provider value={{ 
-      user, 
-      setUser, 
-      loading, 
-      login, 
-      logout,
-      signup,
-      refreshToken 
-    }}>
-      {!loading && children}
+    <UserContext.Provider value={{ user, setUser, loading, login, logout, signup }}>
+      {!loading && children} {/* Makes children after loading is done */}
     </UserContext.Provider>
   );
 };
 
-// Custom hook for using UserContext
+// Custom hook for consuming the UserContext in other components
 const useUser = () => {
   const context = useContext(UserContext);
   if (!context) {
-    throw new Error('useUser must be used within a UserProvider');
+    throw new Error('User must be used within UserProvider');
   }
   return context;
 };

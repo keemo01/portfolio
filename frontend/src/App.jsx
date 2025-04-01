@@ -1,9 +1,9 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar/Navbar';
 import Home from './pages/Home/Home';
 import Coin from './pages/Coin/Coin';
-import SignUp from './pages/Signup/Signup';
+import SignUp from './pages/SignUp/SignUp';
 import Footer from './components/Footer/Footer';
 import Login from './pages/Login/Login';
 import Blog from './pages/Blog/Blog';
@@ -12,7 +12,7 @@ import BlogPost from './pages/Blog/BlogPost';
 import Portfolio from './pages/Portfolio/Portfolio';
 import UserProfile from './pages/UserProfile/UserProfile';
 import { UserProvider } from './context/UserContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, AuthContext } from './context/AuthContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const App = () => {
@@ -20,8 +20,8 @@ const App = () => {
         <AuthProvider>
             <UserProvider>
                 <div className="app">
-                    <Navbar />{/* Navbar component */}
-                    <Routes>{/* Routes for different pages */}
+                    <Navbar />
+                    <Routes>
                         <Route path="/" element={<Home />} />
                         <Route path="/coin/:coinId" element={<Coin />} />
                         <Route path="/signup" element={<SignUp />} />
@@ -32,7 +32,7 @@ const App = () => {
                         <Route path="/profile/:userId" element={<UserProfile />} />
                         <Route path="/portfolio" element={<Portfolio />} />
                     </Routes>
-                    <Footer /> {/* Footer component */}
+                    <Footer />
                 </div>
             </UserProvider>
         </AuthProvider>

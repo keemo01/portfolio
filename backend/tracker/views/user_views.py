@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
+from django.contrib.auth import authenticate
 
 import time
 from urllib.parse import urlencode
@@ -19,7 +20,7 @@ from tracker.models import Blog
 from tracker.serializers import BlogSerializer, UserSerializer
 
 @api_view(['POST'])
-@permission_classes([AllowAny])  # 🚀 This ensures any user can access signup
+@permission_classes([AllowAny])  # Let anyone sign up!
 def signup(request):
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
@@ -41,45 +42,57 @@ def signup(request):
 
 # User Login
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def login(request):
-    """
-    POST /login/
-    Authenticates user with username and password.
-    Returns JWT token and user details.
-    """
     try:
-        user = get_object_or_404(User, username=request.data.get('username'))
-        if not user.check_password(request.data.get('password')):
-            return Response({'detail': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        # Create JWT tokens
-        refresh = RefreshToken.for_user(user)
-        access_token = str(refresh.access_token)
+        username = request.data.get('username')
+        password = request.data.get('password')
         
-        # Return token and user data
-        serializer = UserSerializer(user)
+        if not username or not password:
+            return Response({'detail': 'Please provide both username and password'},
+                          status=status.HTTP_400_BAD_REQUEST)
+        
+        user = authenticate(username=username, password=password)
+        
+        if not user:
+            return Response({'detail': 'Invalid credentials'},
+                          status=status.HTTP_401_UNAUTHORIZED)
+        
+        refresh = RefreshToken.for_user(user)
+        
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'firstName': user.first_name,
+            'lastName': user.last_name
+        }
+        
         return Response({
-            'access_token': access_token,
-            'refresh_token': str(refresh),
-            'user': serializer.data
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': user_data
         }, status=status.HTTP_200_OK)
 
     except Exception as e:
-        return Response({'detail': 'User not found or an error occurred', 'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 # User Logout
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # No auth needed for logout
 def logout(request):
     try:
         refresh_token = request.data.get("refresh_token")
-        token = RefreshToken(refresh_token)
-        token.blacklist()
+        if (refresh_token):
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()  # Blacklist the refresh token
+            except Exception as e:
+                return Response({"detail": f"Failed to blacklist token: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"detail": "Logout successful"}, status=status.HTTP_200_OK)
     except Exception as e:
-        return Response({"detail": "Error logging out", "error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
+        return Response({"detail": f"Error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # Token Validation (Protected Endpoint)
@@ -87,29 +100,29 @@ def logout(request):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def test_token(request):
-    """
-    Test to find if the provided authentication token is valid
-    If the token is valid, return the user's username and email
-    """
-    return Response({
-        'user': {
-            'username': request.user.username,
-            'email': request.user.email
-        }
-    }, status=status.HTTP_200_OK)
+    # Check if token is still valid
+    try:
+        return Response({
+            'status': 'success',
+            'user': {
+                'username': request.user.username,
+                'email': request.user.email,
+                'id': request.user.id
+            }
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'detail': str(e)
+        }, status=status.HTTP_401_UNAUTHORIZED)
     
 
 # User Profile Management
 @api_view(['GET', 'PUT'])
-@authentication_classes([JWTAuthentication])  # Changed from TokenAuthentication to JWTAuthentication
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def user_profile(request):
-    """
-    Retrieve or update user profile information.
-    
-    - GET Request: Returns the user's profile with the given data
-    - PUT Request: Updates the user's profile using given data
-    """
+    # Handle user profile operations
     user = request.user
 
     if request.method == 'GET':
@@ -129,9 +142,7 @@ def user_profile(request):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def change_password(request):
-    """
-    Change the user's password.    
-    """
+    # Update password securely
     user = request.user
     old_password = request.data.get('old_password')
     new_password = request.data.get('new_password')
@@ -150,9 +161,7 @@ def change_password(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_blogs(request):
-    """
-    Retrieve all blogs created by the authenticated user.
-    """
+    # Get all blogs for current user
     blogs = Blog.objects.filter(author=request.user)
     
     # Use the BlogSerializer with request context to properly handle media URLs
@@ -165,11 +174,8 @@ def user_blogs(request):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def get_user_blog(request, blog_id):
-    """
-    Get a specific blog for the authenticated user by blog ID
-    """
+    # Get specific blog post
     try:
-        # Changed filter from user=request.user to author=request.user
         blog = Blog.objects.get(id=blog_id, author=request.user)
         serializer = BlogSerializer(blog)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -180,28 +186,11 @@ def get_user_blog(request, blog_id):
         )
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def logout_view(request):
-    try:
-        # Get the token from the request
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return Response({'error': 'No valid token provided'}, status=401)
-        
-        token = auth_header.split(' ')[1]
-        # Check if the token is valid
-        request.user.auth_token.delete()
-        
-        return Response({'message': 'Successfully logged out'}, status=200)
-    except Exception as e:
-        return Response({'error': str(e)}, status=400)
-
-
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def get_user_posts(request, user_id):
+    # Get all posts for a specific user
     try:
         user = User.objects.get(id=user_id)
         blogs = Blog.objects.filter(author=user).order_by('-created_at')  # Add ordering
@@ -225,6 +214,7 @@ def get_user_posts(request, user_id):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def get_user_profile(request, user_id):
+    # Get profile for a specific user
     try:
         user = User.objects.get(id=user_id)
         serializer = UserSerializer(user)

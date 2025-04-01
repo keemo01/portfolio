@@ -1,3 +1,49 @@
+import hashlib
+from venv import logger
+from django.db import models
+from django.contrib.auth.models import User
+import base64
+from cryptography.fernet import Fernet
+from django.conf import settings
+import secrets
+from django.core.exceptions import ValidationError
+import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+class EncryptedTextField(models.TextField):
+    """Custom field type that automatically encrypts/decrypts data"""
+    def get_fernet(self):
+        try:
+            encryption_key = os.environ.get('DJANGO_ENCRYPTION_KEY')
+            if not encryption_key:
+                raise ValidationError("DJANGO_ENCRYPTION_KEY not set in environment variables")
+            return Fernet(encryption_key.encode())
+        except Exception as e:
+            logger.error(f"Error initializing Fernet: {str(e)}")
+            raise ValidationError("Error with encryption configuration")
+
+    def from_db_value(self, value, expression, connection):
+        if value is None or value == '':
+            return value
+        try:
+            fernet = self.get_fernet()
+            return fernet.decrypt(value.encode()).decode()
+        except Exception as e:
+            logger.error(f"Decryption error for field: {str(e)}")
+            return None
+
+    def get_prep_value(self, value):
+        if value is None or value == '':
+            return value
+        try:
+            fernet = self.get_fernet()
+            return fernet.encrypt(str(value).encode()).decode()
+        except Exception as e:
+            logger.error(f"Encryption error for field: {str(e)}")
+            raise ValidationError("Error encrypting value")
+
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -20,18 +66,10 @@ class BlogMedia(models.Model):
     def __str__(self):
         return f"Media for {self.blog.title}"
 
-class Like(models.Model):
-    """Tracks user likes on blog posts with unique constraint"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='likes')
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('user', 'blog')
 
 class Comment(models.Model):
     """
-    Creates a comment system using self-referential parent-child links.
+    Creates a comment system using  parent-child links.
     """
     blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey(User, on_delete=models.CASCADE) 
@@ -42,20 +80,12 @@ class Comment(models.Model):
     def __str__(self):
         return f'Comment by {self.author} on {self.blog.title}'
 
-class SavedPost(models.Model):
-    """Tracks user bookmarks with unique constraint per user-blog pair"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='saves')
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('user', 'blog')
 
 # Portfolio-related models for crypto
 class PortfolioHolding(models.Model):
     """
-    Stores manual cryptocurrency holdings with purchase information
-    Uses high-precision decimal fields for accurate calculations
+    Keeps track of manually added crypto holdings, including purchase details. 
+    Uses precise decimal values to ensure accurate calculations
     """
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='holdings')
     coin = models.CharField(max_length=10)  # e.g. BTC, ETH, XRP etc.
@@ -68,16 +98,36 @@ class PortfolioHolding(models.Model):
 
 class APIKey(models.Model):
     """
-    Stores exchange API credentials per user
-    Supports multiple exchanges with separate key pairs
+    Stores API credentials for different crypto exchanges, linked to a user.
+    Each user can have separate API keys for Binance and Bybit.
     """
+    
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='api_keys')
-    binance_api_key = models.CharField(max_length=255, blank=True, null=True)
-    binance_secret_key = models.CharField(max_length=255, blank=True, null=True)
-    bybit_api_key = models.CharField(max_length=255, blank=True, null=True)
-    bybit_secret_key = models.CharField(max_length=255, blank=True, null=True)
+    
+    # API keys for different exchanges
+    # Using EncryptedTextField to store sensitive information securely
+    binance_api_key = EncryptedTextField(blank=True, null=True)
+    binance_secret_key = EncryptedTextField(blank=True, null=True)
+    bybit_api_key = EncryptedTextField(blank=True, null=True)
+    bybit_secret_key = EncryptedTextField(blank=True, null=True)
+    
+    # Tracks when the API keys were created and last updated
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        # Validate the model before saving
+        self.full_clean()
+        
+        # Generate a new set of API keys if they are not provided
+        if self.pk:
+            old_instance = APIKey.objects.get(pk=self.pk)
+            self.binance_api_key = self.binance_api_key or old_instance.binance_api_key
+            self.binance_secret_key = self.binance_secret_key or old_instance.binance_secret_key
+            self.bybit_api_key = self.bybit_api_key or old_instance.bybit_api_key
+            self.bybit_secret_key = self.bybit_secret_key or old_instance.bybit_secret_key
+        
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'API Key'
@@ -85,6 +135,7 @@ class APIKey(models.Model):
 
     def __str__(self):
         return f"API Keys for {self.user.username}"
+
 
 class PortfolioHistory(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

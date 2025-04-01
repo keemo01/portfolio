@@ -113,29 +113,36 @@ const BlogPost = () => {
     }, [id]);
 
     const handleCommentSubmit = async (e) => {
-        e.preventDefault();
-        const token = localStorage.getItem('access_token');
+        e.preventDefault(); // Prevents default form submission behavior
+    
+        const token = localStorage.getItem('access_token'); // Get the user's authentication token
+    
         try {
+            // Send a request to add a new comment to the blog post
             const response = await axios.post(
                 `http://127.0.0.1:8000/api/blogs/${id}/comments/`,
                 { content: newComment, blog: id },
                 { 
                     headers: { 
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token}` // Attach the auth token
                     } 
                 }
             );
+    
+            // Update the state with the new comment
             setComments([response.data, ...comments]);
-            setNewComment('');
+            setNewComment(''); // Clear the input field
         } catch (error) {
             console.error('Error posting comment:', error);
         }
     };
-
+    
     const handleReply = async (parentId, content) => {
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem('access_token'); // Get the user's token
+    
         try {
-            const response = await axios.post(
+            // Send a request to post a reply to a specific comment
+            await axios.post(
                 `http://127.0.0.1:8000/api/blogs/${id}/comments/`,
                 { content, parent: parentId },
                 { 
@@ -144,29 +151,37 @@ const BlogPost = () => {
                     } 
                 }
             );
+    
+            // Fetch the updated comments list after replying
             const commentsResponse = await axios.get(
                 `http://127.0.0.1:8000/api/blogs/${id}/comments/`,
                 {
                     headers: { 'Authorization': `Bearer ${token}` }
                 }
             );
-            setComments(commentsResponse.data);
+    
+            setComments(commentsResponse.data); // Update the state with fresh data
         } catch (error) {
             console.error('Error posting reply:', error);
         }
     };
-
+    
     const handleDeleteComment = async (commentId) => {
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem('access_token'); // Get the auth token
+    
         try {
+            // Send a request to delete the selected comment
             await axios.delete(`http://127.0.0.1:8000/api/comments/${commentId}/`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+    
+            // Remove the deleted comment from the state
             setComments(comments.filter(comment => comment.id !== commentId));
         } catch (error) {
             console.error('Error deleting comment:', error);
         }
     };
+    
     
     if (notFound) {
         return (

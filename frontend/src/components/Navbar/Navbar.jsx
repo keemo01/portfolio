@@ -36,7 +36,7 @@ const Navbar = () => {
 
     // Handle logout
 const handleLogout = async () => {
-    // Get the refresh token from localStorage
+    // Gets the refresh token from localStorage
     const refresh_token = localStorage.getItem('refresh_token');
     try {
         // Clear the user state
@@ -54,7 +54,7 @@ const handleLogout = async () => {
       navigate('/login'); // Redirect to the login page
     } catch (error) {
       console.error('Error logging out:', error);
-      // Even if the server request fails, we still want to logout locally
+      // Even if the server request fails still logs out locally
       logout();
       navigate('/login');
     }

@@ -1,67 +1,45 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useContext } from 'react';
 
-export const AuthContext = createContext();
+export const AuthContext = createContext({
+  auth: null,
+  login: () => {},
+  logout: () => {}
+});
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    // Check localStorage for existing user data
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
+  const [auth, setAuth] = useState(() => {
+    try {
+      const savedAuth = localStorage.getItem('auth');
+      if (!savedAuth) return null;
+      return JSON.parse(savedAuth);
+    } catch (error) {
+      console.error('Error parsing auth data:', error);
+      localStorage.removeItem('auth'); // Clear invalid data
+      return null;
+    }
   });
 
-  // Update localStorage when user state changes
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('user');
-    }
-  }, [user]);
-
-  // Add storage event listener
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === 'user') {
-        const newUser = e.newValue ? JSON.parse(e.newValue) : null;
-        setUser(newUser);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Check authentication status periodically
-    const checkAuth = setInterval(() => {
-      const savedUser = localStorage.getItem('user');
-      const parsedUser = savedUser ? JSON.parse(savedUser) : null;
-      if (JSON.stringify(user) !== JSON.stringify(parsedUser)) {
-        setUser(parsedUser);
-      }
-    }, 1000);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(checkAuth);
-    };
-  }, [user]);
-
-  const login = (userData) => {
-    setUser(userData);
+  const login = (authData) => {
+    localStorage.setItem('auth', JSON.stringify(authData));
+    setAuth(authData);
   };
 
   const logout = () => {
-    setUser(null);
-  };
-
-  const value = {
-    user,
-    login,
-    logout
+    localStorage.removeItem('auth');
+    setAuth(null);
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ auth, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
