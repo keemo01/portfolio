@@ -4,9 +4,45 @@ from .models import Blog, BlogMedia, Comment
 
 
 class UserSerializer(serializers.ModelSerializer):
+    firstName = serializers.CharField(source='first_name', required=True)
+    lastName = serializers.CharField(source='last_name', required=True)
+    dob = serializers.DateField(required=False, allow_null=True)
+    
     class Meta:
         model = User
-        fields = ('id', 'username', 'email')
+        fields = ('id', 'username', 'email', 'firstName', 'lastName', 'dob')
+        read_only_fields = ('id',)
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data.get('email', ''),
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
+        )
+        if 'dob' in validated_data:
+            user.dob = validated_data['dob']
+        user.save()
+        return user
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        # Ensure all fields are properly populated
+        representation.update({
+            'id': instance.id,
+            'username': instance.username,
+            'email': instance.email,
+            'firstName': instance.first_name,
+            'lastName': instance.last_name,
+            'dob': getattr(instance, 'dob', None)
+        })
+        return representation
 
 class BlogMediaSerializer(serializers.ModelSerializer):
     file = serializers.SerializerMethodField()
@@ -22,13 +58,23 @@ class BlogMediaSerializer(serializers.ModelSerializer):
         return obj.file.url if obj.file else None
 
 class BlogSerializer(serializers.ModelSerializer):
-    author = serializers.StringRelatedField(source='author.username')
-    author_id = serializers.IntegerField(source='author.id', read_only=True)
+    author = serializers.SerializerMethodField()
+    author_id = serializers.SerializerMethodField()
     media = BlogMediaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Blog
         fields = ['id', 'title', 'content', 'author', 'author_id', 'created_at', 'media']
+    
+    def get_author(self, obj):
+        if obj.author:
+            return obj.author.username
+        return None
+    
+    def get_author_id(self, obj):
+        if obj.author:
+            return obj.author.id
+        return None
         
     def to_representation(self, instance):
         """

@@ -9,8 +9,8 @@ from .views import user_views, blogs_views, portfolio_views, search_views
 urlpatterns = [
     # User authentication routes
     path('signup/', user_views.signup, name='signup'),  # Route to sign up a new user
-    path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  # Route to log in an existing user
+    path('auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  # Route to log in an existing user
     path('logout/', user_views.logout, name='logout'),  # Route to log out the user
 
     # User profile routes

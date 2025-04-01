@@ -10,10 +10,17 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import pymysql
+pymysql.install_as_MySQLdb()
+
 from datetime import timedelta
 from pathlib import Path
 
 import os
+from venv import logger
+from cryptography.fernet import Fernet
+
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -70,7 +77,6 @@ MIDDLEWARE = [
 REST_FRAMEWORK = {  
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
@@ -99,16 +105,54 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "portfolio.wsgi.application"
 
+# ASGI Application
+ASGI_APPLICATION = 'portfolio.asgi.application'
+
+# Channel Layers for WebSocket
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
+}
+
+# Load environment variables
+load_dotenv()
+
+# Encryption Settings
+ENCRYPTION_KEY = os.getenv('DJANGO_ENCRYPTION_KEY')
+if not ENCRYPTION_KEY:
+    # Generate a key if not exists
+    ENCRYPTION_KEY = Fernet.generate_key().decode()
+    logger.warning("Generated new encryption key - make sure to save this in your .env file")
+
+# Ensure key is properly formatted
+try:
+    Fernet(ENCRYPTION_KEY.encode())
+except Exception as e:
+    raise ValueError(f"Invalid encryption key format: {str(e)}")
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'crypto_portfolio',
+        'USER': 'crypto_user',
+        'PASSWORD': 'Blackboy1',
+        'HOST': 'localhost',
+        'PORT': '3306',
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
+            'use_unicode': True,
+            'autocommit': True,
+        }
     }
 }
+
+# Add this to handle MySQL strict mode
+SILENCED_SYSTEM_CHECKS = ['mysql.E001']
 
 STATICFILES_DIRS = [
     BASE_DIR / "frontend/build/static",
@@ -147,19 +191,23 @@ USE_I18N = True
 USE_TZ = True
 
 CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
     "http://localhost:8080",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
 
-
-
-
+CORS_ALLOW_CREDENTIALS = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+    BASE_DIR / "frontend/build/static",
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -167,13 +215,20 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),  # Access token 
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),  # Refresh token 
-    'ROTATE_REFRESH_TOKENS': False,  # No refresh token rotation
-    'BLACKLIST_AFTER_ROTATION': True,  # Blacklist old tokens after rotation
-    'ALGORITHM': 'HS256',  # JWT algorithm
-    'SIGNING_KEY': SECRET_KEY,  # Secret key
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
     'VERIFYING_KEY': None,
     'AUDIENCE': None,
     'ISSUER': None,
+    
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
 }
