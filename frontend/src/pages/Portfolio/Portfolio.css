@@ -1,29 +1,20 @@
-/* General Styles */
+/* Portfolio Container */
 .portfolio-container {
     padding: 2rem;
     max-width: 1200px;
     margin: 0 auto;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: #333;
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #ffffff, #f4f7f9);
     min-height: 100vh;
     opacity: 0;
     animation: fadeIn 1s forwards;
 }
 
-/* General animations */
+/* Animations */
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
-}
-
-@keyframes scaleUp {
-    0% {
-        transform: scale(0.95);
-    }
-    100% {
-        transform: scale(1);
-    }
 }
 
 @keyframes slideInLeft {
@@ -31,13 +22,15 @@
     to { transform: translateX(0); }
 }
 
+/* Portfolio Header */
 .portfolio-header {
     margin-bottom: 2rem;
+    text-align: center;
 }
 
 .portfolio-header h1 {
     color: #2c3e50;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     font-size: 2.5rem;
     margin: 0;
@@ -45,22 +38,25 @@
     animation: slideInLeft 0.6s ease-out forwards;
 }
 
+/* Total Value Card */
 .total-value-card {
-    background: linear-gradient(135deg, #ffffff, #fff700);
-    color: white;
+    background: linear-gradient(135deg, #2980b9, #3498db);
+    color: #fff;
     border: none;
     border-radius: 15px;
-    padding: 0.5rem 2rem;
+    padding: 0.75rem 2rem;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     opacity: 0;
     animation: fadeIn 1s ease-in 0.3s forwards;
+    display: inline-block;
 }
 
+/* Asset Card */
 .asset-card {
-    background: white;
+    background: #fff;
     border: none;
     border-radius: 15px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     overflow: hidden;
     opacity: 0;
@@ -68,10 +64,11 @@
 }
 
 .asset-card:hover {
-    transform: translateY(-10px);
+    transform: translateY(-10px) scale(1.02);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
+/* Asset Card Header */
 .asset-card-header {
     display: flex;
     align-items: center;
@@ -82,9 +79,11 @@
 }
 
 .coin-icon {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     margin-right: 1rem;
+    border-radius: 50%;
+    object-fit: cover;
 }
 
 .asset-card-title {
@@ -95,15 +94,23 @@
     margin: 0;
     font-size: 1.2rem;
     color: #2c3e50;
+    font-weight: 600;
 }
 
-.exchange-badge {
+/* Badges */
+.exchange-badge,
+.account-badge {
     font-size: 0.8rem;
-    color: #6c757d;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    background-color: #e9ecef;
+    color: #495057;
+    margin-top: 2px;
 }
 
+/* Asset Details */
 .asset-details {
-    padding: 0.5rem 0;
+    padding: 1rem;
 }
 
 .detail-row {
@@ -135,243 +142,46 @@
     font-size: 1.1rem;
 }
 
-.loading-container {
+/* Loading and Empty States */
+.loading-container,
+.empty-portfolio {
     text-align: center;
     padding: 3rem;
+    opacity: 0;
     animation: fadeIn 1s ease-in 0.3s forwards;
 }
 
 .empty-portfolio {
-    text-align: center;
-    padding: 3rem;
-    background: white;
+    background: #fff;
     border-radius: 15px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    opacity: 0;
-    animation: fadeIn 1s ease-out forwards;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
+/* Custom Alert */
 .custom-alert {
     border: none;
     border-radius: 15px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    animation: fadeIn 1s ease-in 0.6s forwards;
-}
-
-/* Hero Section */
-.hero-section {
-    text-align: center;
-    padding: 4rem 0;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    margin-bottom: 3rem;
-    opacity: 0;
-    animation: fadeIn 1s ease-in forwards;
-}
-
-.hero-section h1 {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    color: #2c3e50;
-}
-
-.hero-section p {
-    font-size: 1.2rem;
-    color: #666;
-}
-
-/* About Section */
-.about-section {
-    margin-bottom: 3rem;
-}
-
-.about-section h2 {
-    font-size: 2rem;
-    margin-bottom: 1.5rem;
-    color: #2c3e50;
-}
-
-.about-section p {
-    font-size: 1rem;
-    line-height: 1.6;
-    color: #666;
-}
-
-/* Skills Section */
-.skills-section {
-    margin-bottom: 3rem;
-}
-
-.skills-section h2 {
-    font-size: 2rem;
-    margin-bottom: 1.5rem;
-    color: #2c3e50;
-}
-
-.skills-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-}
-
-.skill-item {
-    background: #ffffff;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    font-size: 1.1rem;
-    color: #333;
-    transition: transform 0.3s ease;
-    opacity: 0;
-    animation: fadeIn 1s ease-out forwards;
-}
-
-.skill-item:hover {
-    transform: translateY(-5px);
-}
-
-/* Projects Section */
-.projects-section {
-    margin-bottom: 3rem;
-}
-
-.projects-section h2 {
-    font-size: 2rem;
-    margin-bottom: 1.5rem;
-    color: #2c3e50;
-}
-
-.project-card {
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    transition: transform 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
     opacity: 0;
     animation: fadeIn 1s ease-in 0.6s forwards;
-}
-
-.project-card:hover {
-    transform: translateY(-5px);
-}
-
-.project-image {
-    background: #e9ecef;
-    height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #666;
-    font-size: 1.2rem;
-}
-
-.project-card h3 {
-    font-size: 1.5rem;
-    margin: 1rem 1rem 0.5rem 1rem;
-    color: #2d6fb1;
-}
-
-.project-card p {
-    font-size: 1rem;
-    margin: 0 1rem 1rem 1rem;
-    color: #666;
-    line-height: 1.5;
-}
-
-.view-project-btn {
-    display: block;
-    width: 100%;
-    padding: 0.8rem;
-    background-color: #3498db;
-    color: white;
-    border: none;
-    border-radius: 0 0 8px 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.view-project-btn:hover {
-    background-color: #2980b9;
-}
-
-/* Contact Section */
-.contact-section {
-    margin-bottom: 3rem;
-}
-
-.contact-section h2 {
-    font-size: 2rem;
-    margin-bottom: 1.5rem;
-    color: #2c3e50;
-}
-
-.contact-info {
-    background: #ffffff;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.contact-info p {
-    font-size: 1rem;
-    color: #666;
-    margin-bottom: 0.5rem;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .hero-section h1 {
-        font-size: 2.5rem;
-    }
-
-    .hero-section p {
-        font-size: 1rem;
-    }
-
-    .skills-grid {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    }
-
-    .project-card h3 {
-        font-size: 1.3rem;
-    }
-
-    .project-card p {
-        font-size: 0.9rem;
-    }
-
     .portfolio-container {
         padding: 1rem;
     }
-
     .portfolio-header h1 {
         font-size: 2rem;
     }
-
     .total-value-card {
         padding: 0.5rem 1.5rem;
     }
-
     .asset-card {
         padding: 1rem;
     }
-}
-
-.account-badge {
-  font-size: 0.7rem;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background-color: #e9ecef;
-  color: #495057;
-  margin-top: 2px;
-}
-
-.asset-card-title {
-  flex: 1;
-}
-
-.asset-card-title .d-flex {
-  gap: 4px;
+    .coin-icon {
+        width: 32px;
+        height: 32px;
+    }
 }

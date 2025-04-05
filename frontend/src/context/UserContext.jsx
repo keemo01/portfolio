@@ -3,7 +3,7 @@ import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
 // Set the base URL for your Django backend API
-const BASE_URL = 'http://127.0.0.1:8000/api';
+const BASE_URL = 'http://127.0.0.1:8000';  // Remove /api since it's not in the Django URLs
 
 // Creating a context that holds user-related data and functions
 const UserContext = createContext({
@@ -57,20 +57,24 @@ const UserProvider = ({ children }) => {
       }
 
       try {
-        const response = await axios.get(`${BASE_URL}/test-token/`, {
+        const response = await axios.get(`${BASE_URL}/api/auth/verify/`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`
           }
         });
 
-        if (response?.data?.status === 'success') {
-          setUser(response.data.user);
-        } else {
-          throw new Error('Invalid token');
+        if (response.status === 200) {
+          const userData = response.data.user;
+          if (userData) {
+            setUser(userData);
+            localStorage.setItem('user', JSON.stringify(userData));
+          }
         }
       } catch (error) {
         console.error('Token verification failed:', error);
-        logout();
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          await logout();
+        }
       } finally {
         setLoading(false);
       }
