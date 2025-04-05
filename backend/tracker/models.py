@@ -104,30 +104,36 @@ class APIKey(models.Model):
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='api_keys')
     
-    # API keys for different exchanges
-    # Using EncryptedTextField to store sensitive information securely
-    binance_api_key = EncryptedTextField(blank=True, null=True)
-    binance_secret_key = EncryptedTextField(blank=True, null=True)
-    bybit_api_key = EncryptedTextField(blank=True, null=True)
-    bybit_secret_key = EncryptedTextField(blank=True, null=True)
+    # Encrypted fields for API keys
+    binance_api_key = EncryptedTextField(blank=True, default='')
+    binance_secret_key = EncryptedTextField(blank=True, default='')
+    bybit_api_key = EncryptedTextField(blank=True, default='')
+    bybit_secret_key = EncryptedTextField(blank=True, default='')
     
-    # Tracks when the API keys were created and last updated
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def clean(self):
+        """Ensure empty strings are stored consistently"""
+        # Convert empty strings to None
+        self.binance_api_key = self.binance_api_key or ''
+        self.binance_secret_key = self.binance_secret_key or ''
+        self.bybit_api_key = self.bybit_api_key or ''
+        self.bybit_secret_key = self.bybit_secret_key or ''
+
     def save(self, *args, **kwargs):
-        # Validate the model before saving
-        self.full_clean()
-        
-        # Generate a new set of API keys if they are not provided
-        if self.pk:
-            old_instance = APIKey.objects.get(pk=self.pk)
-            self.binance_api_key = self.binance_api_key or old_instance.binance_api_key
-            self.binance_secret_key = self.binance_secret_key or old_instance.binance_secret_key
-            self.bybit_api_key = self.bybit_api_key or old_instance.bybit_api_key
-            self.bybit_secret_key = self.bybit_secret_key or old_instance.bybit_secret_key
-        
+        self.clean()  # Call the clean method to ensure consistent storage
         super().save(*args, **kwargs)
+
+    @property
+    def has_binance(self):
+        """Check if Binance keys are configured"""
+        return bool(self.binance_api_key and self.binance_secret_key)
+
+    @property
+    def has_bybit(self):
+        """Check if Bybit keys are configured"""
+        return bool(self.bybit_api_key and self.bybit_secret_key)
 
     class Meta:
         verbose_name = 'API Key'
@@ -135,7 +141,6 @@ class APIKey(models.Model):
 
     def __str__(self):
         return f"API Keys for {self.user.username}"
-
 
 class PortfolioHistory(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

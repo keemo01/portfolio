@@ -29,7 +29,7 @@ const ApiKeyManager = ({ onSave }) => {
         }
       });
 
-      // If  request is successful, call the onSave function
+      // If the request is successful, call the onSave function (e.g., to refresh the page or show success feedback)
       if (response.data.detail === 'success') {
         onSave?.();
       }
@@ -43,7 +43,7 @@ const ApiKeyManager = ({ onSave }) => {
 
   return (
     <Form onSubmit={handleSubmit}>
-      {/* Input the Bybit API key */}
+      {/* Where we'll input the Bybit API key */}
       <Form.Group>
         <Form.Label>Bybit API Key</Form.Label>
         <Form.Control
@@ -54,7 +54,7 @@ const ApiKeyManager = ({ onSave }) => {
         />
       </Form.Group>
 
-      {/* Input the Bybit  Secret Key */}
+      {/* Where we'll input the Bybit  Secret Key */}
       <Form.Group>
         <Form.Label>Bybit Secret Key</Form.Label>
         <Form.Control
@@ -65,7 +65,7 @@ const ApiKeyManager = ({ onSave }) => {
         />
       </Form.Group>
 
-      {/* Show an error message if there is an issue saving API keys */}
+      {/* Shows an error message if there is an issue saving API keys */}
       {error && <Alert variant="danger">{error}</Alert>}
       
       {/* Save button is disabled while processing the request */}

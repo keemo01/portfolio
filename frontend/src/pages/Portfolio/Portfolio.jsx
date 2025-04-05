@@ -13,6 +13,28 @@ const Portfolio = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('access_token');
 
+  // Add token validation
+  const validateToken = useCallback(() => {
+    if (!token) {
+      navigate('/login');
+      return false;
+    }
+    try {
+      // Check if token is expired by decoding JWT
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp * 1000 < Date.now()) {
+        localStorage.removeItem('access_token');
+        navigate('/login');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      localStorage.removeItem('access_token');
+      navigate('/login');
+      return false;
+    }
+  }, [token, navigate]);
+
   // Portfolio and API states
   const [portfolioData, setPortfolioData] = useState([]);
   const [totalValue, setTotalValue] = useState(0);
@@ -41,11 +63,10 @@ const Portfolio = () => {
     }).format(num);
   };
 
+  // Modify fetchPortfolioData to use token validation
   const fetchPortfolioData = useCallback(async () => {
-    if (!token) {
-      navigate('/login');
-      return;
-    }
+    if (!validateToken()) return;
+    
     setLoading(true);
     try {
       const response = await axios.get('http://127.0.0.1:8000/api/portfolio/', {
@@ -76,7 +97,7 @@ const Portfolio = () => {
         setError(errors.join('. '));
       }
     } catch (err) {
-      if (err.response?.status === 401) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem('access_token');
         navigate('/login');
       } else {
@@ -85,10 +106,12 @@ const Portfolio = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, navigate]);
+  }, [token, navigate, validateToken]);
 
+  // Modify fetchApiKeysStatus to use token validation
   const fetchApiKeysStatus = useCallback(async () => {
-    if (!token) return;
+    if (!validateToken()) return;
+    
     try {
       const response = await axios.get('http://127.0.0.1:8000/api/profile/api-keys/', {
         headers: {
@@ -103,15 +126,18 @@ const Portfolio = () => {
         });
       }
     } catch (err) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem('access_token');
+        navigate('/login');
+      }
       console.error('Error fetching API keys:', err);
     }
-  }, [token]);
+  }, [token, navigate, validateToken]);
 
+  // Modify fetchHistoricalData to use token validation
   const fetchHistoricalData = useCallback(async (days = 30, coin = null) => {
-    if (!token) {
-      navigate('/login');
-      return;
-    }
+    if (!validateToken()) return;
+    
     try {
       const params = new URLSearchParams();
       params.append('days', days);
@@ -130,42 +156,31 @@ const Portfolio = () => {
         setHistoricalData(response.data.history);
       }
     } catch (err) {
-      console.error('Error fetching historical data:', err);
-      if (err.response?.status === 401) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem('access_token');
         navigate('/login');
       }
+      console.error('Error fetching historical data:', err);
     }
-  }, [token, navigate]);
+  }, [token, navigate, validateToken]);
 
   useEffect(() => {
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-    fetchPortfolioData();
-  }, [token, fetchPortfolioData, navigate]);
+    validateToken() && fetchPortfolioData();
+  }, [validateToken, fetchPortfolioData]);
 
   useEffect(() => {
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-    fetchApiKeysStatus();
-  }, [token, fetchApiKeysStatus, navigate]);
+    validateToken() && fetchApiKeysStatus();
+  }, [validateToken, fetchApiKeysStatus]);
 
   useEffect(() => {
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-    // Fetch historical data based on the currently selected coin
-    fetchHistoricalData(30, selectedCoin === "Combined" ? null : selectedCoin);
-  }, [token, fetchHistoricalData, navigate, selectedCoin]);
+    validateToken() && fetchHistoricalData(30, selectedCoin === "Combined" ? null : selectedCoin);
+  }, [validateToken, fetchHistoricalData, selectedCoin]);
 
+  // Modify handleSubmitApiKeys to use token validation
   const handleSubmitApiKeys = async (e) => {
     e.preventDefault();
-    if (!token) return;
+    if (!validateToken()) return;
+    
     setSavingKeys(true);
     setApiError(null);
     try {
@@ -185,28 +200,35 @@ const Portfolio = () => {
           bybit: !!response.data.bybit_api_key
         });
         setShowApiModal(false);
-        await fetchPortfolioData(); // Refresh portfolio data after saving
-        await fetchApiKeysStatus(); // Refresh API key status
+        await fetchPortfolioData(); // Refresh portfolio data
+        await fetchApiKeysStatus(); // Refresh API keys status
       }
     } catch (err) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem('access_token');
+        navigate('/login');
+      }
       setApiError(err.response?.data?.detail || 'Failed to save API keys. Please check your keys and try again.');
     } finally {
       setSavingKeys(false);
     }
   };
 
+  // Modify handleRemoveApiKeys to use token validation
   const handleRemoveApiKeys = async (exchange) => {
-    if (!token) return;
+    if (!validateToken()) return;
+    
     setSavingKeys(true);
     setApiError(null);
     try {
         const response = await axios.delete(
-            `http://127.0.0.1:8000/api/profile/api-keys/?exchange=${exchange}`,
+            'http://127.0.0.1:8000/api/profile/api-keys/',
             {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
-                }
+                },
+                data: { exchange } // Specify which exchange's keys to remove
             }
         );
         if (response.data) {
@@ -227,6 +249,10 @@ const Portfolio = () => {
             setShowApiModal(false);
         }
     } catch (err) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem('access_token');
+        navigate('/login');
+      }
         setApiError('Failed to remove API keys. Please try again.');
     } finally {
         setSavingKeys(false);
