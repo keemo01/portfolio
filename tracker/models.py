@@ -141,7 +141,8 @@ class PortfolioHistory(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
     total_value = models.DecimalField(max_digits=20, decimal_places=2)
-    
+    coin_values = models.JSONField(default=dict, null=True)  # Add this field
+
     class Meta:
         ordering = ['-timestamp']
         indexes = [

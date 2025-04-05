@@ -159,12 +159,22 @@ def portfolio(request):
     user = request.user
     try:
         api_keys = APIKey.objects.get(user=user)
+        # Check if there are any active API keys
+        if not api_keys.binance_api_key and not api_keys.bybit_api_key:
+            return Response({
+                'detail': 'No active API keys found',
+                'has_api_keys': False,
+                'portfolio': [],
+                'total_value': 0
+            }, status=status.HTTP_200_OK)
         logger.info("Found API keys for %s", user.username)
     except APIKey.DoesNotExist:
         return Response({
             'detail': 'Need to add API keys in portfolio settings',
-            'has_api_keys': False
-        }, status=status.HTTP_400_BAD_REQUEST)
+            'has_api_keys': False,
+            'portfolio': [],
+            'total_value': 0
+        }, status=status.HTTP_200_OK)
 
     portfolio_data = []
     errors = []
@@ -191,7 +201,7 @@ def portfolio(request):
                             'current_price': current_price,
                             'current_value': value,
                             'transferable': str(holding['transferable']),
-                            'original_value': original_value  # Always include original_value
+                            'original_value': original_value  # Include original value if available
                         })
                         logger.info("Added %s from Bybit: %s @ $%s = $%s (original: $%s)", 
                                   coin, amount, current_price, value, original_value)
@@ -242,7 +252,7 @@ def portfolio(request):
     manual_holdings = PortfolioHolding.objects.filter(user=user)
     manual_data = {}
     
-    # First pass: Aggregate amounts and costs by coin
+    # First pass: Form manual holdings
     for holding in manual_holdings:
         coin = holding.coin.upper()
         amount = float(holding.amount)
@@ -277,6 +287,7 @@ def portfolio(request):
             'current_value': current_value,
         })
 
+    # If no holdings were found, return an empty portfolio
     if not portfolio_data and errors:
         return Response({
             'detail': 'Error fetching holdings',
@@ -285,41 +296,161 @@ def portfolio(request):
         }, status=status.HTTP_200_OK)
 
     total_value = sum(item['current_value'] for item in portfolio_data)
+    
     if portfolio_data:
+        # Create a dictionary of coin values
+        coin_values = {}
+        for item in portfolio_data:
+            coin = item['coin']
+            value = item['current_value']
+            if coin in coin_values:
+                coin_values[coin] += value
+            else:
+                coin_values[coin] = value
+
+        # Save the history record with coin values
         PortfolioHistory.objects.create(
             user=user,
             total_value=total_value,
-            timestamp=timezone.now()
+            coin_values=coin_values
         )
     return Response({
         'portfolio': portfolio_data,
         'total_value': total_value,
         'errors': errors if errors else None
     }, status=status.HTTP_200_OK)
+    
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def portfolio_history(request):
+    """
+    GET /api/portfolio/history/?days=30&coin=BTC
+    Returns historical data for either total portfolio value or specific coin value.
+    """
+    user = request.user
+    try:
+        days = int(request.query_params.get('days', 30))
+    except ValueError:
+        days = 30
+    
+    coin = request.query_params.get('coin')
+    start_date = timezone.now() - timedelta(days=days)
+    histories = PortfolioHistory.objects.filter(
+        user=user, 
+        timestamp__gte=start_date
+    ).order_by('timestamp')
 
-@api_view(['POST', 'GET'])
+    history_data = []
+    for record in histories:
+        try:
+            if coin:
+                # Get the value for the specific coin, defaulting to 0 if not found
+                coin_values = record.coin_values or {}
+                coin_value = float(coin_values.get(coin.upper(), 0))
+                history_data.append({
+                    'timestamp': record.timestamp.isoformat(),
+                    'value': coin_value
+                })
+            else:
+                history_data.append({
+                    'timestamp': record.timestamp.isoformat(),
+                    'value': float(record.total_value)
+                })
+        except (TypeError, ValueError) as e:
+            logger.error(f"Error processing history record: {e}")
+            continue
+
+    return Response({'history': history_data}, status=status.HTTP_200_OK)
+
+@api_view(['POST', 'GET', 'DELETE'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def manage_api_keys(request):
     """
-    Manage the user's API keys.
-    - POST: Save/update API keys for Binance and Bybit.
-    - GET: Retrieve masked API keys.
+    Manage API keys:
+    - POST: Add/update keys
+    - GET: Retrieve key status
+    - DELETE: Remove keys
     """
+    if request.method == 'DELETE':
+        try:
+            api_keys = APIKey.objects.get(user=request.user)
+            exchange = request.data.get('exchange')
+            
+            if exchange == 'binance':
+                api_keys.binance_api_key = None
+                api_keys.binance_secret_key = None
+            elif exchange == 'bybit':
+                api_keys.bybit_api_key = None
+                api_keys.bybit_secret_key = None
+            else:
+                return Response(
+                    {'detail': 'Invalid exchange specified'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            api_keys.save()
+            return Response({
+                'binance_api_key': '*' * 8 + api_keys.binance_api_key[-4:] if api_keys.binance_api_key else None,
+                'bybit_api_key': '*' * 8 + api_keys.bybit_api_key[-4:] if api_keys.bybit_api_key else None,
+                'has_api_keys': bool(api_keys.binance_api_key or api_keys.bybit_api_key)
+            })
+        except APIKey.DoesNotExist:
+            return Response({'has_api_keys': False})
+
     if request.method == 'POST':
         try:
             api_keys, created = APIKey.objects.get_or_create(user=request.user)
-            if 'binance_api_key' in request.data:
-                api_keys.binance_api_key = request.data['binance_api_key']
-            if 'binance_secret_key' in request.data:
-                api_keys.binance_secret_key = request.data['binance_secret_key']
-            if 'bybit_api_key' in request.data:
-                api_keys.bybit_api_key = request.data['bybit_api_key']
-            if 'bybit_secret_key' in request.data:
-                api_keys.bybit_secret_key = request.data['bybit_secret_key']
+            
+            # Check if this is a removal request
+            exchange = request.data.get('exchange')
+            if exchange:
+                if exchange == 'binance':
+                    api_keys.binance_api_key = None
+                    api_keys.binance_secret_key = None
+                elif exchange == 'bybit':
+                    api_keys.bybit_api_key = None
+                    api_keys.bybit_secret_key = None
+                api_keys.save()
+                return Response({
+                    'binance_api_key': '*' * 8 + api_keys.binance_api_key[-4:] if api_keys.binance_api_key else None,
+                    'bybit_api_key': '*' * 8 + api_keys.bybit_api_key[-4:] if api_keys.bybit_api_key else None,
+                    'has_api_keys': bool(api_keys.binance_api_key or api_keys.bybit_api_key)
+                })
+            
+            # Convert incoming values: empty strings become None
+            binance_api_key = request.data.get('binance_api_key', '').strip() or None
+            binance_secret_key = request.data.get('binance_secret_key', '').strip() or None
+            bybit_api_key = request.data.get('bybit_api_key', '').strip() or None
+            bybit_secret_key = request.data.get('bybit_secret_key', '').strip() or None
+            
+            # Determine which exchange's keys are being updated.
+            # Allow only one exchange's keys to be active at a time.
+            if binance_api_key or binance_secret_key:
+                # Remove any existing Bybit keys
+                api_keys.bybit_api_key = None
+                api_keys.bybit_secret_key = None
+                # Update Binance keys
+                api_keys.binance_api_key = binance_api_key
+                api_keys.binance_secret_key = binance_secret_key
+            elif bybit_api_key or bybit_secret_key:
+                # Remove any existing Binance keys
+                api_keys.binance_api_key = None
+                api_keys.binance_secret_key = None
+                # Update Bybit keys
+                api_keys.bybit_api_key = bybit_api_key
+                api_keys.bybit_secret_key = bybit_secret_key
+            else:
+                # If both are empty, clear both
+                api_keys.binance_api_key = None
+                api_keys.binance_secret_key = None
+                api_keys.bybit_api_key = None
+                api_keys.bybit_secret_key = None
+            
             api_keys.save()
-
-            # Optionally, test the Binance API key if available
+            
+            # Optionally, test the API keys if just added (excluding test environment)
             if 'test' not in request.META.get('SERVER_NAME', '').lower():
                 try:
                     if api_keys.binance_api_key and api_keys.binance_secret_key:
@@ -339,13 +470,15 @@ def manage_api_keys(request):
                         )
                         if response.status_code != 200:
                             logger.warning("Binance API test response: %s - %s", response.status_code, response.text)
+                    # Similar testing can be added for Bybit if desired
                 except Exception as e:
                     logger.error("Error testing API keys: %s", e)
             
             return Response({
                 'binance_api_key': '*' * 8 + api_keys.binance_api_key[-4:] if api_keys.binance_api_key else None,
                 'bybit_api_key': '*' * 8 + api_keys.bybit_api_key[-4:] if api_keys.bybit_api_key else None,
-                'has_api_keys': bool(api_keys.binance_api_key or api_keys.bybit_api_key)
+                'has_api_keys': bool(api_keys.binance_api_key or api_keys.bybit_api_key),
+                'active_exchange': 'binance' if api_keys.binance_api_key else ('bybit' if api_keys.bybit_api_key else None)
             })
         except Exception as e:
             logger.error("Error managing API keys: %s", e)
@@ -360,20 +493,3 @@ def manage_api_keys(request):
             })
         except APIKey.DoesNotExist:
             return Response({'has_api_keys': False})
-
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
-def portfolio_history(request):
-    days = int(request.GET.get('days', 30))
-    history = PortfolioHistory.objects.filter(
-        user=request.user,
-        timestamp__gte=timezone.now() - timedelta(days=days)
-    ).order_by('timestamp').values('timestamp', 'total_value')
-    
-    data = [{
-        'timestamp': timezone.localtime(entry['timestamp']).isoformat(),
-        'value': float(entry['total_value'])
-    } for entry in history]
-    
-    return Response({'history': data})
