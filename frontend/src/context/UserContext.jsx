@@ -2,10 +2,8 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
-// Set the base URL for your Django backend API
-const BASE_URL = 'http://127.0.0.1:8000';  // Remove /api since it's not in the Django URLs
+const BASE_URL = 'http://127.0.0.1:8000';
 
-// Creating a context that holds user-related data and functions
 const UserContext = createContext({
   user: null,
   setUser: () => {},

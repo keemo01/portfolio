@@ -4,7 +4,7 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 # Import views from specific modules
-from .views import user_views, blogs_views, portfolio_views, search_views, price_views
+from .views import user_views, blogs_views, portfolio_views, search_views
 
 urlpatterns = [
     # User authentication routes
@@ -38,11 +38,8 @@ urlpatterns = [
     # Portfolio-related routes
     path('portfolio/', portfolio_views.portfolio, name='portfolio'),  # Route to view the user's portfolio
     path('portfolio/add/', portfolio_views.add_holding, name='add_holding'),  # Route to add a new holding to the portfolio
+    path('portfolio/history/', portfolio_views.portfolio_history, name='portfolio_history'),  # Add this line
     path('profile/api-keys/', portfolio_views.manage_api_keys, name='manage_api_keys'),  # Route to manage API keys in user profile
-    path('portfolio/history/', portfolio_views.portfolio_history, name='portfolio_history'),  # Route to view portfolio history
-
-    # Price-related routes (now using price_views)
-    path('price/coin-history/<str:coin>/', price_views.coin_price_history, name='coin_price_history'),
 
     # Search-related routes
     path('api/search/', search_views.search, name='search'),

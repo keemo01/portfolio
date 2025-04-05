@@ -7,7 +7,13 @@ const PortfolioChart = ({ data, onRangeChange }) => {
 
   // Sort the chart data chronologically for proper rendering
   const sortedData = useMemo(() => {
-    return data.slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    if (!data || !data.length) return [];
+    return data
+      .map(item => ({
+        ...item,
+        timestamp: new Date(item.timestamp).getTime() // Convert ISO string to timestamp
+      }))
+      .sort((a, b) => a.timestamp - b.timestamp);
   }, [data]);
 
   const handleRangeChange = useCallback(
@@ -49,10 +55,18 @@ const PortfolioChart = ({ data, onRangeChange }) => {
           <ResponsiveContainer>
             <LineChart data={sortedData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="timestamp" 
-                tickFormatter={(timestamp) => new Date(timestamp).toLocaleDateString()}
+              <XAxis
+              dataKey="timestamp"
+                type="number"
+                domain={['dataMin', 'dataMax']}
+                scale="time"
+                tickFormatter={(ts) => {
+                  const date = new Date(ts);
+                  // e.g. show Month/Day
+                  return `${date.getMonth() + 1}/${date.getDate()}`;
+                }}
               />
+
               <YAxis tickFormatter={(value) => `$${value.toLocaleString()}`} />
               <Tooltip 
                 formatter={(value) => [`$${value.toLocaleString()}`, 'Portfolio Value']}
