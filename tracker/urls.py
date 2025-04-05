@@ -4,7 +4,7 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 # Import views from specific modules
-from .views import user_views, blogs_views, portfolio_views, search_views
+from .views import user_views, blogs_views, portfolio_views, search_views, price_views
 
 urlpatterns = [
     # User authentication routes
@@ -12,6 +12,7 @@ urlpatterns = [
     path('auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  # Route to log in an existing user
     path('logout/', user_views.logout, name='logout'),  # Route to log out the user
+    path('auth/verify/', user_views.test_token, name='token_verify'),  # Changed to use test_token instead
 
     # User profile routes
     path('profile/', user_views.user_profile, name='user_profile'),  # Route to view user profile
@@ -39,6 +40,9 @@ urlpatterns = [
     path('portfolio/add/', portfolio_views.add_holding, name='add_holding'),  # Route to add a new holding to the portfolio
     path('profile/api-keys/', portfolio_views.manage_api_keys, name='manage_api_keys'),  # Route to manage API keys in user profile
     path('portfolio/history/', portfolio_views.portfolio_history, name='portfolio_history'),  # Route to view portfolio history
+
+    # Price-related routes (now using price_views)
+    path('price/coin-history/<str:coin>/', price_views.coin_price_history, name='coin_price_history'),
 
     # Search-related routes
     path('api/search/', search_views.search, name='search'),

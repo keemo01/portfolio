@@ -232,3 +232,26 @@ def get_user_profile(request, user_id):
             'status': 'error',
             'message': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def verify_token(request):
+    """
+    Verify if the current token is valid
+    """
+    try:
+        return Response({
+            'status': 'success',
+            'user': {
+                'id': request.user.id,
+                'username': request.user.username,
+                'email': request.user.email,
+                'firstName': request.user.first_name,
+                'lastName': request.user.last_name,
+            }
+        })
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
