@@ -13,14 +13,13 @@ const Portfolio = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('access_token');
 
-  // Add token validation
+  // Validate the token and redirect to login if invalid or expired.
   const validateToken = useCallback(() => {
     if (!token) {
       navigate('/login');
       return false;
     }
     try {
-      // Check if token is expired by decoding JWT
       const payload = JSON.parse(atob(token.split('.')[1]));
       if (payload.exp * 1000 < Date.now()) {
         localStorage.removeItem('access_token');
@@ -35,12 +34,13 @@ const Portfolio = () => {
     }
   }, [token, navigate]);
 
-  // Portfolio and API states
+  // Portfolio states
   const [portfolioData, setPortfolioData] = useState([]);
   const [totalValue, setTotalValue] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // API Keys Modal states
   const [showApiModal, setShowApiModal] = useState(false);
   const [apiKeys, setApiKeys] = useState({
     binance_api_key: '',
@@ -56,6 +56,7 @@ const Portfolio = () => {
   const [historicalData, setHistoricalData] = useState([]);
   const [selectedCoin, setSelectedCoin] = useState("Combined");
 
+  // Helper function to format numbers
   const formatNumber = (num, decimals = 2) => {
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: decimals,
@@ -63,7 +64,7 @@ const Portfolio = () => {
     }).format(num);
   };
 
-  // Modify fetchPortfolioData to use token validation
+  // Fetch portfolio data
   const fetchPortfolioData = useCallback(async () => {
     if (!validateToken()) return;
     
@@ -81,13 +82,12 @@ const Portfolio = () => {
         const sortedHoldings = portfolio
           .sort((a, b) => parseFloat(b.current_value) - parseFloat(a.current_value))
           .map(holding => ({
-              ...holding,
-              current_value: parseFloat(holding.current_value),
-              current_price: parseFloat(holding.current_price),
-              purchase_price: holding.purchase_price != null ? parseFloat(holding.purchase_price) : null,
-              original_value: holding.original_value != null ? parseFloat(holding.original_value) : null
-            })
-          );
+            ...holding,
+            current_value: parseFloat(holding.current_value),
+            current_price: parseFloat(holding.current_price),
+            purchase_price: holding.purchase_price != null ? parseFloat(holding.purchase_price) : null,
+            original_value: holding.original_value != null ? parseFloat(holding.original_value) : null
+          }));
         
         setPortfolioData(sortedHoldings);
         setTotalValue(total_value || 0);
@@ -108,10 +108,9 @@ const Portfolio = () => {
     }
   }, [token, navigate, validateToken]);
 
-  // Modify fetchApiKeysStatus to use token validation
+  // Fetch API key status
   const fetchApiKeysStatus = useCallback(async () => {
     if (!validateToken()) return;
-    
     try {
       const response = await axios.get('http://127.0.0.1:8000/api/profile/api-keys/', {
         headers: {
@@ -134,10 +133,9 @@ const Portfolio = () => {
     }
   }, [token, navigate, validateToken]);
 
-  // Modify fetchHistoricalData to use token validation
+  // Fetch historical data for chart
   const fetchHistoricalData = useCallback(async (days = 30, coin = null) => {
     if (!validateToken()) return;
-    
     try {
       const params = new URLSearchParams();
       params.append('days', days);
@@ -164,23 +162,29 @@ const Portfolio = () => {
     }
   }, [token, navigate, validateToken]);
 
-  useEffect(() => {
-    validateToken() && fetchPortfolioData();
-  }, [validateToken, fetchPortfolioData]);
+  const handleCoinSelect = useCallback((coin) => {
+    setSelectedCoin(coin);
+  }, []);
 
+  // Optimize useEffect to prevent unnecessary reloads
   useEffect(() => {
-    validateToken() && fetchApiKeysStatus();
-  }, [validateToken, fetchApiKeysStatus]);
+    if (validateToken()) {
+      fetchPortfolioData();
+      fetchApiKeysStatus();
+    }
+  }, [validateToken, fetchPortfolioData, fetchApiKeysStatus]);
 
+  // Separate effect for historical data
   useEffect(() => {
-    validateToken() && fetchHistoricalData(30, selectedCoin === "Combined" ? null : selectedCoin);
+    if (validateToken() && selectedCoin) {
+      fetchHistoricalData(30, selectedCoin === "Combined" ? null : selectedCoin);
+    }
   }, [validateToken, fetchHistoricalData, selectedCoin]);
 
-  // Modify handleSubmitApiKeys to use token validation
+  // Handle API keys submission
   const handleSubmitApiKeys = async (e) => {
     e.preventDefault();
     if (!validateToken()) return;
-    
     setSavingKeys(true);
     setApiError(null);
     try {
@@ -200,8 +204,8 @@ const Portfolio = () => {
           bybit: !!response.data.bybit_api_key
         });
         setShowApiModal(false);
-        await fetchPortfolioData(); // Refresh portfolio data
-        await fetchApiKeysStatus(); // Refresh API keys status
+        await fetchPortfolioData();
+        await fetchApiKeysStatus();
       }
     } catch (err) {
       if (err.response?.status === 401 || err.response?.status === 403) {
@@ -214,54 +218,49 @@ const Portfolio = () => {
     }
   };
 
-  // Modify handleRemoveApiKeys to use token validation
+  // Handle removal of API keys
   const handleRemoveApiKeys = async (exchange) => {
     if (!validateToken()) return;
-    
     setSavingKeys(true);
     setApiError(null);
     try {
-        const response = await axios.delete(
-            'http://127.0.0.1:8000/api/profile/api-keys/',
-            {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                data: { exchange } // Specify which exchange's keys to remove
-            }
-        );
-        if (response.data) {
-            // Update local state
-            setApiKeyStatus((prev) => ({ ...prev, [exchange]: false }));
-            setApiKeys((prev) => ({
-                ...prev,
-                [`${exchange}_api_key`]: '',
-                [`${exchange}_secret_key`]: ''
-            }));
-            
-            // Clear portfolio data
-            setPortfolioData([]);
-            setTotalValue(0);
-            setHistoricalData([]);
-            
-            // Close modal
-            setShowApiModal(false);
+      const response = await axios.delete(
+        'http://127.0.0.1:8000/api/profile/api-keys/',
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          data: { exchange }
         }
+      );
+      if (response.data) {
+        setApiKeyStatus(prev => ({ ...prev, [exchange]: false }));
+        setApiKeys(prev => ({
+          ...prev,
+          [`${exchange}_api_key`]: '',
+          [`${exchange}_secret_key`]: ''
+        }));
+        
+        // Refresh portfolio data instead of clearing it
+        await fetchPortfolioData();
+        await fetchHistoricalData(30, selectedCoin === "Combined" ? null : selectedCoin);
+        setShowApiModal(false);
+      }
     } catch (err) {
       if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem('access_token');
         navigate('/login');
       }
-        setApiError('Failed to remove API keys. Please try again.');
+      setApiError('Failed to remove API keys. Please try again.');
     } finally {
-        setSavingKeys(false);
+      setSavingKeys(false);
     }
-};
+  };
 
+  // Get the coin icon (with a graceful fallback)
   const getCoinIcon = (symbol) => {
     if (!symbol) return null;
-    
     const fallbackIcon = `data:image/svg+xml,${encodeURIComponent(`
       <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
         <rect width="40" height="40" fill="#6c757d"/>
@@ -270,7 +269,6 @@ const Portfolio = () => {
         </text>
       </svg>
     `)}`;
-
     return {
       src: `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${symbol.toLowerCase()}.png`,
       fallback: fallbackIcon
@@ -281,12 +279,10 @@ const Portfolio = () => {
     return [...portfolioData].sort((a, b) => parseFloat(b.current_value) - parseFloat(a.current_value));
   }, [portfolioData]);
 
-  // Get the list of coins available from the portfolio data
+  // Extract unique coin list for the filter buttons.
   const uniqueCoins = useMemo(() => {
     const coins = new Set();
-    sortedPortfolioData.forEach(holding => {
-      coins.add(holding.coin);
-    });
+    sortedPortfolioData.forEach(holding => coins.add(holding.coin));
     return Array.from(coins);
   }, [sortedPortfolioData]);
 
@@ -298,11 +294,11 @@ const Portfolio = () => {
         <h1>
           <FaWallet className="me-2" /> Crypto Portfolio
         </h1>
-        <div className="d-flex justify-content-center gap-3 mt-3">
+        <div className="header-actions">
           {!loading && !error && portfolioData.length > 0 && (
             <Card className="total-value-card">
               <Card.Body>
-                <h3 className="mb-0">Total Value: ${formatNumber(totalValue)}</h3>
+                <h3>Total Value: ${formatNumber(totalValue)}</h3>
               </Card.Body>
             </Card>
           )}
@@ -312,14 +308,13 @@ const Portfolio = () => {
         </div>
       </div>
 
-      {!loading && !error && portfolioData.length > 0 && (
+      {(!loading && !error && portfolioData.length > 0) && (
         <>
-          {/* Coin Filter Buttons */}
-          <div className="coin-filter mb-4">
+          <div className="coin-filter">
             <ButtonGroup>
               <Button 
                 variant={selectedCoin === "Combined" ? "primary" : "outline-primary"}
-                onClick={() => setSelectedCoin("Combined")}
+                onClick={() => handleCoinSelect("Combined")}
               >
                 Combined
               </Button>
@@ -327,7 +322,7 @@ const Portfolio = () => {
                 <Button 
                   key={coin} 
                   variant={selectedCoin === coin ? "primary" : "outline-primary"}
-                  onClick={() => setSelectedCoin(coin)}
+                  onClick={() => handleCoinSelect(coin)}
                 >
                   {coin}
                 </Button>
@@ -336,9 +331,10 @@ const Portfolio = () => {
           </div>
           <Row>
             <Col lg={8}>
-              <PortfolioChart data={historicalData} onRangeChange={(days) => {
-                fetchHistoricalData(days, selectedCoin === "Combined" ? null : selectedCoin);
-              }} />
+              <PortfolioChart 
+                data={historicalData} 
+                onRangeChange={(days) => fetchHistoricalData(days, selectedCoin === "Combined" ? null : selectedCoin)}
+              />
             </Col>
             <Col lg={4}>
               <AssetAllocationChart data={sortedPortfolioData} />
@@ -360,114 +356,93 @@ const Portfolio = () => {
               </Alert>
             )}
             <h5 className="mb-3">
-              Binance API Keys
-              {apiKeyStatus.binance && <Badge bg="success" className="ms-2">Active</Badge>}
+              Binance API Keys {apiKeyStatus.binance && <Badge bg="success" className="ms-2">Active</Badge>}
             </h5>
             {!apiKeyStatus.binance ? (
               apiKeyStatus.bybit ? (
                 <div className="mb-4">
                   <p className="text-muted">
-                  Binance API Keys cant be added while Bybit API keys are active. Remove Binance kets to add Bybit keys
+                    Binance API Keys cannot be added while Bybit API keys are active.
                   </p>
                 </div>
               ) : (
-              <>
-                <Form.Group className="mb-3">
-                  <Form.Label>API Key</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Enter Binance API Key"
-                    value={apiKeys.binance_api_key}
-                    onChange={(e) => setApiKeys({ ...apiKeys, binance_api_key: e.target.value })}
-                  />
-                </Form.Group>
-                <Form.Group className="mb-4">
-                  <Form.Label>Secret Key</Form.Label>
-                  <Form.Control
-                    type="password"
-                    placeholder="Enter Binance Secret Key"
-                    value={apiKeys.binance_secret_key}
-                    onChange={(e) => setApiKeys({ ...apiKeys, binance_secret_key: e.target.value })}
-                  />
-                </Form.Group>
-              </>
+                <>
+                  <Form.Group className="mb-3">
+                    <Form.Label>API Key</Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Enter Binance API Key"
+                      value={apiKeys.binance_api_key}
+                      onChange={(e) => setApiKeys({ ...apiKeys, binance_api_key: e.target.value })}
+                    />
+                  </Form.Group>
+                  <Form.Group className="mb-4">
+                    <Form.Label>Secret Key</Form.Label>
+                    <Form.Control
+                      type="password"
+                      placeholder="Enter Binance Secret Key"
+                      value={apiKeys.binance_secret_key}
+                      onChange={(e) => setApiKeys({ ...apiKeys, binance_secret_key: e.target.value })}
+                    />
+                  </Form.Group>
+                </>
               )
             ) : (
               <div className="mb-4">
                 <p className="text-muted mb-2">API keys are configured and active</p>
-                <Button
-                  variant="outline-danger"
-                  size="sm"
-                  onClick={() => handleRemoveApiKeys('binance')}
-                  disabled={savingKeys}
-                >
+                <Button variant="outline-danger" size="sm" onClick={() => handleRemoveApiKeys('binance')} disabled={savingKeys}>
                   Remove Binance Keys
                 </Button>
               </div>
             )}
             <h5 className="mb-3">
-              Bybit API Keys
-              {apiKeyStatus.bybit && <Badge bg="success" className="ms-2">Active</Badge>}
+              Bybit API Keys {apiKeyStatus.bybit && <Badge bg="success" className="ms-2">Active</Badge>}
             </h5>
             {!apiKeyStatus.bybit ? (
               apiKeyStatus.binance ? (
                 <div className="mb-4">
                   <p className="text-muted">
-                    Bybit API Keys cant be added while Binance API keys are active. Remove Bybit kets to add Binance keys
+                    Bybit API Keys cannot be added while Binance API keys are active.
                   </p>
                 </div>
               ) : (
-              <>
-                <Form.Group className="mb-3">
-                  <Form.Label>API Key</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Enter Bybit API Key"
-                    value={apiKeys.bybit_api_key}
-                    onChange={(e) => setApiKeys({ ...apiKeys, bybit_api_key: e.target.value })}
-                  />
-                </Form.Group>
-                <Form.Group className="mb-4">
-                  <Form.Label>Secret Key</Form.Label>
-                  <Form.Control
-                    type="password"
-                    placeholder="Enter Bybit Secret Key"
-                    value={apiKeys.bybit_secret_key}
-                    onChange={(e) => setApiKeys({ ...apiKeys, bybit_secret_key: e.target.value })}
-                  />
-                </Form.Group>
-              </>
+                <>
+                  <Form.Group className="mb-3">
+                    <Form.Label>API Key</Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Enter Bybit API Key"
+                      value={apiKeys.bybit_api_key}
+                      onChange={(e) => setApiKeys({ ...apiKeys, bybit_api_key: e.target.value })}
+                    />
+                  </Form.Group>
+                  <Form.Group className="mb-4">
+                    <Form.Label>Secret Key</Form.Label>
+                    <Form.Control
+                      type="password"
+                      placeholder="Enter Bybit Secret Key"
+                      value={apiKeys.bybit_secret_key}
+                      onChange={(e) => setApiKeys({ ...apiKeys, bybit_secret_key: e.target.value })}
+                    />
+                  </Form.Group>
+                </>
               )
             ) : (
               <div className="mb-4">
                 <p className="text-muted mb-2">API keys are configured and active</p>
-                <Button
-                  variant="outline-danger"
-                  size="sm"
-                  onClick={() => handleRemoveApiKeys('bybit')}
-                  disabled={savingKeys}
-                >
+                <Button variant="outline-danger" size="sm" onClick={() => handleRemoveApiKeys('bybit')} disabled={savingKeys}>
                   Remove Bybit Keys
                 </Button>
               </div>
             )}
             <div className="d-flex justify-content-end gap-2">
-              <Button variant="secondary" onClick={() => setShowApiModal(false)}>
-                Close
-              </Button>
-              <Button 
-                  variant="primary" 
-                  type="submit" 
-                  disabled={savingKeys}
-              >
-                  {savingKeys ? (
-                      <>
-                          <Spinner size="sm" className="me-2" />
-                          Saving...
-                      </>
-                  ) : (
-                      'Save Changes'
-                  )}
+              <Button variant="secondary" onClick={() => setShowApiModal(false)}>Close</Button>
+              <Button variant="primary" type="submit" disabled={savingKeys}>
+                {savingKeys ? (
+                  <>
+                    <Spinner size="sm" className="me-2" /> Saving...
+                  </>
+                ) : 'Save Changes'}
               </Button>
             </div>
           </Form>
@@ -485,18 +460,14 @@ const Portfolio = () => {
             <FaExchangeAlt className="me-2" /> API Connection Required
           </Alert.Heading>
           <p>{error}</p>
-          <Link to="/profile" className="btn btn-primary mt-2">
-            Connect Exchange
-          </Link>
+          <Link to="/profile" className="btn btn-primary mt-2">Connect Exchange</Link>
         </Alert>
       ) : portfolioData.length === 0 ? (
         <div className="empty-portfolio text-center">
           <FaCoins size={50} className="mb-3" />
           <h3>No Holdings Found</h3>
-          <p>Time to start your crypto journey!</p>
-          <Link to="/profile" className="btn btn-primary mt-2">
-            Add Exchange API Keys
-          </Link>
+          <p>Start your crypto journey by connecting an exchange.</p>
+          <Link to="/profile" className="btn btn-primary mt-2">Add Exchange API Keys</Link>
         </div>
       ) : (
         <Row className="mt-4">
@@ -536,7 +507,6 @@ const Portfolio = () => {
           ))}
         </Row>
       )}
-      
     </Container>
   );
 };

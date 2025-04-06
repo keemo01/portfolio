@@ -2,6 +2,15 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, ButtonGroup, Button } from 'react-bootstrap';
 
+const TIME_RANGES = [
+  { label: '1D', days: 1 },
+  { label: '7D', days: 7 },
+  { label: '30D', days: 30 },
+  { label: '90D', days: 90 },
+  { label: '180D', days: 180 },
+  { label: '1Y', days: 365 }
+];
+
 const PortfolioChart = ({ data, onRangeChange }) => {
   const [activeRange, setActiveRange] = useState(30);
 
@@ -30,24 +39,15 @@ const PortfolioChart = ({ data, onRangeChange }) => {
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h4>Portfolio Value Over Time</h4>
           <ButtonGroup size="sm">
-            <Button 
-              variant={activeRange === 7 ? "primary" : "outline-primary"}
-              onClick={() => handleRangeChange(7)}
-            >
-              7D
-            </Button>
-            <Button 
-              variant={activeRange === 30 ? "primary" : "outline-primary"}
-              onClick={() => handleRangeChange(30)}
-            >
-              30D
-            </Button>
-            <Button 
-              variant={activeRange === 90 ? "primary" : "outline-primary"}
-              onClick={() => handleRangeChange(90)}
-            >
-              90D
-            </Button>
+            {TIME_RANGES.map(({ label, days }) => (
+              <Button
+                key={days}
+                variant={activeRange === days ? "primary" : "outline-primary"}
+                onClick={() => handleRangeChange(days)}
+              >
+                {label}
+              </Button>
+            ))}
           </ButtonGroup>
         </div>
 

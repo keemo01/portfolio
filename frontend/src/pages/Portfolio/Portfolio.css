@@ -1,178 +1,168 @@
-/* Portfolio Container */
+/* Container & Overall Layout */
 .portfolio-container {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #333;
-    background: linear-gradient(135deg, #ffffff, #f4f7f9);
-    min-height: 100vh;
-    opacity: 0;
-    animation: fadeIn 1s forwards;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+  background: linear-gradient(135deg, #ffffff, #f4f7f9);
+  min-height: 100vh;
+  animation: fadeIn 1s forwards;
 }
 
 /* Animations */
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideInLeft {
-    from { transform: translateX(-50px); }
-    to { transform: translateX(0); }
+  from { transform: translateX(-50px); }
+  to { transform: translateX(0); }
 }
 
-/* Portfolio Header */
+/* Header */
 .portfolio-header {
-    margin-bottom: 2rem;
-    text-align: center;
+  margin-bottom: 2rem;
+  text-align: center;
 }
 
 .portfolio-header h1 {
-    color: #2c3e50;
-    display: inline-flex;
-    align-items: center;
-    font-size: 2.5rem;
-    margin: 0;
-    transform: translateX(-50px);
-    animation: slideInLeft 0.6s ease-out forwards;
+  color: #2c3e50;
+  font-size: 2.5rem;
+  animation: slideInLeft 0.6s ease-out forwards;
+}
+
+.header-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 /* Total Value Card */
 .total-value-card {
-    background: linear-gradient(135deg, #2980b9, #3498db);
-    color: #fff;
-    border: none;
-    border-radius: 15px;
-    padding: 0.75rem 2rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    opacity: 0;
-    animation: fadeIn 1s ease-in 0.3s forwards;
-    display: inline-block;
+  background: linear-gradient(135deg, #1d3557, #457b9d);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 1s ease-in 0.3s forwards;
 }
 
 /* Asset Card */
-/* Asset Card Container */
 .asset-card {
-    background: #fff;
-    border: none;
-    border-radius: 15px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    overflow: hidden;
-    opacity: 0;
-    animation: fadeIn 1s ease-out forwards;
-  }
-  
-  .asset-card:hover {
-    transform: translateY(-5px) scale(1.03);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-  }
-  
-  /* Asset Card Header */
-  .asset-card-header {
-    display: flex;
-    align-items: center;
-    padding: 1rem;
-    background: linear-gradient(135deg, #2980b9, #3498db);
-    color: #fff;
-  }
-  
-  .coin-icon {
-    width: 40px;
-    height: 40px;
-    margin-right: 1rem;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid #fff;
-  }
-  
-  .asset-card-title h4 {
-    margin: 0;
-    font-size: 1.2rem;
-    font-weight: 600;
-    flex-grow: 1;
-  }
-  
-  .exchange-badge {
-    font-size: 0.8rem;
-    background-color: #fff;
-    color: #2980b9;
-    padding: 0.4rem 0.8rem;
-    border-radius: 12px;
-  }
-  
-  /* Asset Details */
-  .asset-details {
-    padding: 1rem;
-  }
-  
-  .detail-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #f1f1f1;
-  }
-  
-  .detail-row:last-child {
-    border-bottom: none;
-  }
-  
-  .detail-row span:first-child {
-    color: #666;
-  }
-  
-  .value {
-    font-weight: 600;
-    color: #333;
-  }
-  
+  background: #fff;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  overflow: hidden;
+  animation: fadeIn 1s ease-out forwards;
+}
 
-.total-value .value {
-    color: #2196f3;
-    font-size: 1.1rem;
+.asset-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.asset-card-header {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, #1d3557, #457b9d);
+  color: #fff;
+}
+
+.coin-icon {
+  width: 40px;
+  height: 40px;
+  margin-right: 1rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+}
+
+.asset-card-title h4 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  flex-grow: 1;
+}
+
+.exchange-badge {
+  font-size: 0.8rem;
+  background-color: #fff;
+  color: #1d3557;
+  padding: 0.4rem 0.8rem;
+  border-radius: 12px;
+}
+
+/* Asset Details */
+.asset-details {
+  padding: 1rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row span:first-child {
+  color: #666;
+}
+
+.value {
+  font-weight: 600;
+  color: #333;
 }
 
 /* Loading and Empty States */
 .loading-container,
 .empty-portfolio {
-    text-align: center;
-    padding: 3rem;
-    opacity: 0;
-    animation: fadeIn 1s ease-in 0.3s forwards;
+  text-align: center;
+  padding: 3rem;
+  animation: fadeIn 1s ease-in 0.3s forwards;
 }
 
 .empty-portfolio {
-    background: #fff;
-    border-radius: 15px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
 }
 
 /* Custom Alert */
 .custom-alert {
-    border: none;
-    border-radius: 15px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-    opacity: 0;
-    animation: fadeIn 1s ease-in 0.6s forwards;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  animation: fadeIn 1s ease-in 0.6s forwards;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .portfolio-container {
-        padding: 1rem;
-    }
-    .portfolio-header h1 {
-        font-size: 2rem;
-    }
-    .total-value-card {
-        padding: 0.5rem 1.5rem;
-    }
-    .asset-card {
-        padding: 1rem;
-    }
-    .coin-icon {
-        width: 32px;
-        height: 32px;
-    }
+  .portfolio-container {
+    padding: 1rem;
+  }
+  .portfolio-header h1 {
+    font-size: 2rem;
+  }
+  .total-value-card {
+    padding: 0.5rem 1rem;
+  }
+  .asset-card {
+    padding: 1rem;
+  }
+  .coin-icon {
+    width: 32px;
+    height: 32px;
+  }
 }
