@@ -125,6 +125,15 @@
   color: #333;
 }
 
+/* Portfolio Metrics */
+.detail-row .text-success {
+  color: #28a745;
+}
+
+.detail-row .text-danger {
+  color: #dc3545;
+}
+
 /* Loading and Empty States */
 .loading-container,
 .empty-portfolio {
@@ -164,5 +173,8 @@
   .coin-icon {
     width: 32px;
     height: 32px;
+  }
+  .portfolio-metrics .card {
+    margin-bottom: 1rem;
   }
 }

@@ -56,6 +56,12 @@ const Portfolio = () => {
   const [historicalData, setHistoricalData] = useState([]);
   const [selectedCoin, setSelectedCoin] = useState("Combined");
 
+  const [portfolioMetrics, setPortfolioMetrics] = useState({
+    total_cost: 0,
+    allocation: [],
+    exchange_distribution: {}
+  });
+
   // Helper function to format numbers
   const formatNumber = (num, decimals = 2) => {
     return new Intl.NumberFormat('en-US', {
@@ -76,7 +82,7 @@ const Portfolio = () => {
           'Content-Type': 'application/json'
         }
       });
-      const { portfolio, total_value, errors } = response.data;
+      const { portfolio, total_value, total_cost, allocation, exchange_distribution, errors } = response.data;
       
       if (portfolio) {
         const sortedHoldings = portfolio
@@ -91,6 +97,11 @@ const Portfolio = () => {
         
         setPortfolioData(sortedHoldings);
         setTotalValue(total_value || 0);
+        setPortfolioMetrics({
+          total_cost: total_cost || 0,
+          allocation: allocation || [],
+          exchange_distribution: exchange_distribution || {}
+        });
         setError(null);
       }
       if (errors?.length) {
@@ -288,6 +299,48 @@ const Portfolio = () => {
 
   if (!user) return null;
 
+  const PortfolioMetrics = () => (
+    <Row className="mb-4">
+      <Col md={6} lg={4}>
+        <Card>
+          <Card.Body>
+            <h5>Portfolio Overview</h5>
+            <div className="detail-row">
+              <span>Total Value:</span>
+              <span className="value">${formatNumber(totalValue)}</span>
+            </div>
+            <div className="detail-row">
+              <span>Total Cost:</span>
+              <span className="value">${formatNumber(portfolioMetrics.total_cost)}</span>
+            </div>
+            <div className="detail-row">
+              <span>Total P/L:</span>
+              <span className={`value ${totalValue - portfolioMetrics.total_cost > 0 ? 'text-success' : 'text-danger'}`}>
+                ${formatNumber(totalValue - portfolioMetrics.total_cost)}
+              </span>
+            </div>
+          </Card.Body>
+        </Card>
+      </Col>
+      
+      <Col md={6} lg={4}>
+        <Card>
+          <Card.Body>
+            <h5>Exchange Distribution</h5>
+            {Object.entries(portfolioMetrics.exchange_distribution).map(([exchange, value]) => (
+              <div key={exchange} className="detail-row">
+                <span>{exchange}:</span>
+                <span className="value">
+                  ${formatNumber(value)} ({formatNumber((value / totalValue) * 100)}%)
+                </span>
+              </div>
+            ))}
+          </Card.Body>
+        </Card>
+      </Col>
+    </Row>
+  );
+
   return (
     <Container fluid className="portfolio-container">
       <div className="portfolio-header">
@@ -310,6 +363,7 @@ const Portfolio = () => {
 
       {(!loading && !error && portfolioData.length > 0) && (
         <>
+          <PortfolioMetrics />
           <div className="coin-filter">
             <ButtonGroup>
               <Button 
