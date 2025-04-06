@@ -49,6 +49,11 @@ urlpatterns = [
     # User profile and posts endpoints
     path('user/profile/<int:user_id>/', user_views.get_user_profile, name='user-profile'),
     path('user/<int:user_id>/posts/', user_views.get_user_posts, name='user-posts'),
+    
+    # Bookmark routes
+    path('bookmarks/', user_views.user_bookmarks, name='user_bookmarks'),
+    path('bookmarks/add/<int:blog_id>/', user_views.add_bookmark, name='add_bookmark'),
+    path('bookmarks/remove/<int:blog_id>/', user_views.remove_bookmark, name='remove_bookmark'),
 ]
 
 # Serve media files in development
