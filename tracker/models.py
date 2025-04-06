@@ -162,3 +162,14 @@ class PortfolioHistory(models.Model):
         indexes = [
             models.Index(fields=['user', 'timestamp'])
         ]
+        
+class Bookmark(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookmarks')
+    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='bookmarked_by')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'blog')
+
+    def __str__(self):
+        return f"{self.user.username} bookmarked {self.blog.title}"
