@@ -13,6 +13,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from tracker.models import PortfolioHolding, APIKey, PortfolioHistory
 from .binance_utils import get_binance_price  
+from .portfolio_utils import aggregate_portfolio_holdings, calculate_portfolio_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -368,42 +369,55 @@ def portfolio(request):
             logger.warning("Could not fetch price for manual holding: %s", coin)
             errors.append(f"Could not fetch price for {coin}")
 
-    # If no holdings were found, return an empty portfolio
-    if not portfolio_data:
-        return Response({
-            'detail': 'No holdings found' if not errors else 'Error fetching holdings',
-            'errors': errors if errors else None,
-            'portfolio': [],
-            'total_value': 0
-        }, status=status.HTTP_200_OK)
-
-    total_value = sum(item['current_value'] for item in portfolio_data)
+    # Aggregate holdings
+    consolidated = aggregate_portfolio_holdings(portfolio_data)
+    metrics = calculate_portfolio_metrics(consolidated)
     
-    # Save historical data
-    coin_values = {}
-    for item in portfolio_data:
-        # Ensure coin keys are uppercase
-        coin_key = item['coin'].upper()  
-        value = item['current_value']
-        coin_values[coin_key] = coin_values.get(coin_key, 0) + value
+    # Convert consolidated data back to list format
+    portfolio_data = []
+    for coin, data in consolidated.items():
+        portfolio_data.append({
+            'coin': coin,
+            'amount': str(data['total_amount']),
+            'current_price': float(data['current_price']),
+            'current_value': float(data['total_value']),
+            'transferable': str(data['transferable']),
+            'original_value': float(data['original_value']) if data['original_value'] else None,
+            'sources': data['sources'],
+            'pnl_percentage': float(metrics['pnl'][coin]['percentage']) if data['original_value'] else None
+        })
 
-    # Save historical data with active exchanges info
-    active_exchanges = []
-    if api_keys.binance_api_key and api_keys.binance_secret_key:
-        active_exchanges.append('binance')
-    if api_keys.bybit_api_key and api_keys.bybit_secret_key:
-        active_exchanges.append('bybit')
-
+    # Save historical data with aggregated values
     PortfolioHistory.objects.create(
         user=user,
-        total_value=total_value,
-        coin_values={k.upper(): v for k, v in coin_values.items()},
-        active_exchanges=active_exchanges
+        total_value=metrics['total_value'],
+        coin_values={k: float(v['total_value']) for k, v in consolidated.items()},
+        active_exchanges=list(metrics['exchange_distribution'].keys())
     )
+
+    # Calculate daily P&L
+    target_time = timezone.now() - timedelta(hours=24)
+    previous_record = PortfolioHistory.objects.filter(
+        user=user, 
+        timestamp__lte=target_time # Filter for records older than 24 hours
+    ).order_by('-timestamp').first()
     
+    if previous_record and previous_record.total_value > 0:
+        daily_pnl_absolute = metrics['total_value'] - previous_record.total_value
+        daily_pnl_percentage = (daily_pnl_absolute / previous_record.total_value) * 100
+    else:
+        daily_pnl_absolute = None
+        daily_pnl_percentage = None
+    
+
     return Response({
-        'portfolio': portfolio_data,
-        'total_value': total_value,
+        'portfolio': sorted(portfolio_data, key=lambda x: x['current_value'], reverse=True),
+        'total_value': float(metrics['total_value']),
+        'total_cost': float(metrics['total_cost']),
+        'allocation': metrics['allocation'],
+        'exchange_distribution': {k: float(v) for k, v in metrics['exchange_distribution'].items()},
+        'daily_pnl': float(daily_pnl_absolute) if daily_pnl_absolute is not None else None,
+        'daily_pnl_percentage': float(daily_pnl_percentage) if daily_pnl_percentage is not None else None,
         'errors': errors if errors else None
     }, status=status.HTTP_200_OK)
     
