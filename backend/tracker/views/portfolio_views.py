@@ -389,10 +389,10 @@ def portfolio(request):
 
     # Save historical data with aggregated values
     PortfolioHistory.objects.create(
-        user=user,
-        total_value=metrics['total_value'],
-        coin_values={k: float(v['total_value']) for k, v in consolidated.items()},
-        active_exchanges=list(metrics['exchange_distribution'].keys())
+    user=user,
+    total_value=metrics['total_value'],
+    coin_values={k: float(v['total_value']) for k, v in consolidated.items()},
+    active_exchanges=[ex.lower() for ex in metrics['exchange_distribution'].keys()]
     )
 
     # Calculate daily P&L
@@ -457,6 +457,7 @@ def portfolio_history(request):
             current_exchanges.add('binance')
         if user.api_keys.bybit_api_key:
             current_exchanges.add('bybit')
+
 
     for record in histories:
         try:

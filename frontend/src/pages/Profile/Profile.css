@@ -320,3 +320,30 @@ h3 {
         padding: 1.5rem;
     }
 }
+
+/* ===  Styling for Bookmarked Blogs === */
+/* Bookmarked Section */
+bookmarked-section .blog-card {
+    border: 2px solid #f39c12;
+    background-color: #fffaf0;
+}
+
+.bookmarked-section .blog-card h4 {
+    color: #d35400;
+}
+
+/* Option 2: If you want to target the remove bookmark button regardless, style it here: */
+.blog-card .remove-bookmark-button {
+    background-color: #e74c3c;
+    color: #fff;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease;
+}
+
+.blog-card .remove-bookmark-button:hover {
+    background-color: #c0392b;
+}

@@ -162,14 +162,20 @@ class PortfolioHistory(models.Model):
         indexes = [
             models.Index(fields=['user', 'timestamp'])
         ]
-        
+
 class Bookmark(models.Model):
+    """
+    Stores a bookmark linking a user to a blog post.
+    Ensures that each blog can be bookmarked only once per user.
+    """
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookmarks')
-    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='bookmarked_by')
+    blog = models.ForeignKey('Blog', on_delete=models.CASCADE, related_name='bookmarks')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('user', 'blog')
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.user.username} bookmarked {self.blog.title}"
+        return f"{self.user.username} bookmarked '{self.blog.title}'"
+        

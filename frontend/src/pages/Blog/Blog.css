@@ -905,3 +905,23 @@ mark {
 .remove-media:hover {
     background: rgba(0, 0, 0, 0.8);
 }
+
+.bookmark-btn {
+    background-color: #007bff; /* Primary blue */
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+  }
+  
+  .bookmark-btn:hover {
+    background-color: #0056b3; /* Darker blue for hover state */
+  }
+  
+  .bookmark-btn:active {
+    background-color: #004085; /* Even darker blue for active state */
+  }
+  

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useUser } from '../../context/UserContext';
 import axios from 'axios';
 import './Profile.css';
@@ -26,12 +26,11 @@ const ProfilePage = () => {
       const fetchUserData = async () => {
         try {
           const response = await axios.get(`${BASE_URL}/user/`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           });
           updateUser(response.data);
         } catch (err) {
           console.error("Error fetching user data:", err);
-          setError("Failed to load user profile");
         }
       };
       fetchUserData();
@@ -48,10 +47,7 @@ const ProfilePage = () => {
   // Fetch user's own blogs
   useEffect(() => {
     const fetchUserBlogs = async () => {
-      if (!user || !user.username) {
-        // User is not logged in or username is not available
-        return;
-      }
+      if (!user || !user.username) return;
       try {
         const token = localStorage.getItem('access_token');
         if (!token) {
@@ -59,14 +55,11 @@ const ProfilePage = () => {
           setLoadingBlogs(false);
           return;
         }
-        
-        // Make the API call to fetch blogs
         const response = await axios.get(`${BASE_URL}/user-blogs/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        
-        // Check if the response is valid
-        setBlogs(response.data);
+        // Check if response.data is an array or an object
+        setBlogs(response.data.blogs || response.data);
         setError(null);
       } catch (err) {
         console.error("Error fetching blogs:", err.response || err);
@@ -81,34 +74,36 @@ const ProfilePage = () => {
     }
   }, [user?.id, activeTab]);
 
-  // Fetch user's bookmarked posts
-  useEffect(() => {
-    const fetchBookmarks = async () => {
-      if (!user?.id) {
-        setLoadingBookmarks(false);
-        return;
-      }
-      setLoadingBookmarks(true);
-      try {
-        const token = localStorage.getItem('access_token');
-        const response = await axios.get(`${BASE_URL}/user-bookmarks/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });        
-        setBookmarks(response.data);
-        setBookmarkError(null);
-      } catch (err) {
-        console.error("Error fetching bookmarks:", err.response || err);
-        setBookmarkError("Failed to fetch bookmarks. Please try again.");
-      } finally {
-        setLoadingBookmarks(false);
-      }
-    };
+  // Extracted function to fetch user's bookmarked posts
+  const fetchBookmarks = useCallback(async () => {
+    if (!user?.id) {
+      setLoadingBookmarks(false);
+      return;
+    }
+    setLoadingBookmarks(true);
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await axios.get(`${BASE_URL}/user-bookmarks/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setBookmarks(response.data);
+      setBookmarkError(null);
+    } catch (err) {
+      console.error("Error fetching bookmarks:", err.response || err);
+      setBookmarkError("Failed to fetch bookmarks. Please try again.");
+    } finally {
+      setLoadingBookmarks(false);
+    }
+  }, [user?.id]);
 
-    if (activeTab === 'bookmarks') {
+  // Fetch bookmarks when the bookmarks tab becomes active
+  useEffect(() => {
+    if (activeTab === 'bookmarks' && user?.id) {
       fetchBookmarks();
     }
-  }, [user?.id, activeTab]);
+  }, [user?.id, activeTab, fetchBookmarks]);
 
+  // Handler for updating profile info
   const handleUpdateProfile = async () => {
     try {
       const token = localStorage.getItem('access_token');
@@ -118,7 +113,6 @@ const ProfilePage = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // Update the user context with the new data
       updateUser({
         ...user,
         username: username
@@ -132,16 +126,51 @@ const ProfilePage = () => {
     }
   };
 
+  // Handler for adding a bookmark from any page
+  const handleAddBookmark = async (blogId) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await axios.post(`${BASE_URL}/add-bookmark/${blogId}/`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert(response.data.detail);
+      if (activeTab === 'bookmarks') {
+        fetchBookmarks();
+      }
+    } catch (err) {
+      console.error("Error adding bookmark:", err.response || err);
+      setBookmarkError("Failed to add bookmark. Please try again.");
+    }
+  };
+
+  // Handler for removing a bookmark from any page
+  const handleRemoveBookmark = async (blogId) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await axios.delete(`${BASE_URL}/remove-bookmark/${blogId}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert(response.data.detail);
+      if (activeTab === 'bookmarks') {
+        fetchBookmarks();
+      }
+    } catch (err) {
+      console.error("Error removing bookmark:", err.response || err);
+      setBookmarkError("Failed to remove bookmark. Please try again.");
+    }
+  };
+
   return (
     <div className="profile-container">
+      {/* Render the header with the user's profile name and an edit button */}
       <div className="profile-header">
-        {/* Display user profile information */}
         <h2>{user ? `${user.username}'s Profile` : "Profile"}</h2>
         <button onClick={() => setIsEditing(true)} className="edit-profile-button">
           Edit Profile
         </button>
       </div>
-
+  
+      {/* Render the edit profile popup when isEditing is true */}
       {isEditing && (
         <div className="popup">
           <div className="popup-content">
@@ -152,15 +181,14 @@ const ProfilePage = () => {
               value={username} 
               onChange={(e) => setUsername(e.target.value)} 
             />
-            
             <label>New Password:</label>
             <input 
               type="password" 
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 
             />
-            
             <div className="popup-actions">
+              {/* Call the update function when the user clicks Save */}
               <button onClick={handleUpdateProfile} className="save-button">
                 Save
               </button>
@@ -168,28 +196,28 @@ const ProfilePage = () => {
                 Cancel
               </button>
             </div>
-            
             {updateMessage && <p className="update-message">{updateMessage}</p>}
           </div>
         </div>
       )}
-
-      {/* Tabs for switching between user blogs and bookmarks */}
+  
+      {/* Allows the tabs for switching between "Your Blogs" and "Bookmarked Posts" */}
       <div className="profile-tabs">
         <button 
           className={activeTab === 'blogs' ? 'active' : ''}
           onClick={() => setActiveTab('blogs')}
         >
-          Your Blogs
+          Your Posts
         </button>
         <button 
           className={activeTab === 'bookmarks' ? 'active' : ''}
           onClick={() => setActiveTab('bookmarks')}
         >
-          Bookmarked Posts
+          Saved Posts
         </button>
       </div>
-
+  
+      {/* Display the user's blogs when the blogs tab is active */}
       {activeTab === 'blogs' && (
         <>
           <h3>Your Blogs</h3>
@@ -202,7 +230,13 @@ const ProfilePage = () => {
               {blogs.map(blog => (
                 <div key={blog.id} className="blog-card">
                   <h4>{blog.title}</h4>
-                  <p className="blog-excerpt">{blog.content.substring(0, 100)}...</p>
+                  <p className="blog-excerpt">
+                    {/* Before calling the substring meth ensure that blog.content is declared and of type string. */}
+                    {blog.content && typeof blog.content === 'string'
+                      ? blog.content.substring(0, 100)
+                      : 'No content available.'}
+                    ...
+                  </p>
                   {blog.media && blog.media.length > 0 && (
                     <div className="post-media">
                       {blog.media.map((mediaObj, index) => (
@@ -222,6 +256,13 @@ const ProfilePage = () => {
                     <a href={`/blog/${blog.id}`} className="read-more-link">
                       Read More
                     </a>
+                    {/* Include a button to add the blog as a bookmark */}
+                    <button
+                      onClick={() => handleAddBookmark(blog.id)}
+                      className="bookmark-button"
+                    >
+                      Bookmark
+                    </button>
                   </div>
                 </div>
               ))}
@@ -231,50 +272,72 @@ const ProfilePage = () => {
           )}
         </>
       )}
-
+  
+      {/* render the bookmarked posts when the bookmarks tab is active */}
       {activeTab === 'bookmarks' && (
-        <>
-          <h3>Bookmarked Posts</h3>
-          {loadingBookmarks ? (
-            <p className="message">Loading bookmarks...</p>
-          ) : bookmarkError ? (
-            <p className="message error">{bookmarkError}</p>
-          ) : bookmarks.length > 0 ? (
-            <div className="blog-grid">
-              {bookmarks.map(blog => (
-                <div key={blog.id} className="blog-card">
-                  <h4>{blog.title}</h4>
-                  <p className="blog-excerpt">{blog.content.substring(0, 100)}...</p>
-                  {blog.media && blog.media.length > 0 && (
-                    <div className="post-media">
-                      {blog.media.map((mediaObj, index) => (
-                        mediaObj.file.endsWith('.mp4') || mediaObj.file.endsWith('.mov') ? (
-                          <video key={index} controls className="blog-video">
-                            <source src={mediaObj.file} type="video/mp4" />
-                            Your browser does not support videos.
-                          </video>
-                        ) : (
-                          <img key={index} src={mediaObj.file} alt="Blog Media" className="blog-image" />
-                        )
-                      ))}
-                    </div>
-                  )}
-                  <div className="blog-metadata">
-                    <span>Published: {new Date(blog.created_at).toLocaleDateString()}</span>
-                    <a href={`/blog/${blog.id}`} className="read-more-link">
-                      Read More
-                    </a>
-                  </div>
+  <>
+    <h3>Bookmarked Posts</h3>
+    {loadingBookmarks ? (
+      <p className="message">Loading bookmarks...</p>
+    ) : bookmarkError ? (
+      <p className="message error">{bookmarkError}</p>
+    ) : bookmarks.length > 0 ? (
+      <div className="blog-grid">
+        {bookmarks.map((bookmark) => {
+          const blog = bookmark.blog; // Assuming bookmark has a 'blog' property
+          return (
+            <div key={bookmark.id} className="blog-card">
+              <h4>{blog?.title}</h4>
+              <p className="blog-excerpt">
+                {blog?.content && typeof blog.content === 'string'
+                  ? blog.content.substring(0, 100)
+                  : 'No content available.'}
+                ...
+              </p>
+              {blog?.media && blog.media.length > 0 && (
+                <div className="post-media">
+                  {blog.media.map((mediaObj, index) => (
+                    mediaObj.file.endsWith('.mp4') || mediaObj.file.endsWith('.mov') ? (
+                      <video key={index} controls className="blog-video">
+                        <source src={mediaObj.file} type="video/mp4" />
+                        Your browser does not support videos.
+                      </video>
+                    ) : (
+                      <img
+                        key={index}
+                        src={mediaObj.file}
+                        alt="Blog Media"
+                        className="blog-image"
+                      />
+                    )
+                  ))}
                 </div>
-              ))}
+              )}
+              <div className="blog-metadata">
+                <span>
+                  Published: {new Date(blog.created_at).toLocaleDateString()}
+                </span>
+                <a href={`/blog/${blog.id}`} className="read-more-link">
+                  Read More
+                </a>
+                <button
+                  onClick={() => handleRemoveBookmark(blog.id)}
+                  className="remove-bookmark-button"
+                >
+                  Remove Bookmark
+                </button>
+              </div>
             </div>
-          ) : (
-            <p className="no-blogs-message">No bookmarked posts found.</p>
-          )}
-        </>
-      )}
+          );
+        })}
+      </div>
+    ) : (
+      <p className="no-blogs-message">No bookmarked posts found.</p>
+    )}
+  </>
+)}
+
     </div>
   );
-};
-
+}
 export default ProfilePage;

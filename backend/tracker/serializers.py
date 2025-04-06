@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Blog, BlogMedia, Comment
+from .models import Blog, BlogMedia, Bookmark, Comment
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -33,7 +33,6 @@ class UserSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        # Ensure all fields are properly populated
         representation.update({
             'id': instance.id,
             'username': instance.username,
@@ -43,6 +42,7 @@ class UserSerializer(serializers.ModelSerializer):
             'dob': getattr(instance, 'dob', None)
         })
         return representation
+
 
 class BlogMediaSerializer(serializers.ModelSerializer):
     file = serializers.SerializerMethodField()
@@ -96,3 +96,13 @@ class CommentSerializer(serializers.ModelSerializer):
         replies = Comment.objects.filter(parent=obj)
         serializer = CommentSerializer(replies, many=True, context=self.context)
         return serializer.data
+
+class BookmarkSerializer(serializers.ModelSerializer):
+    # Display the blog details using your existing BlogSerializer
+    blog = BlogSerializer(read_only=True)
+    # Allow posting a bookmark by specifying the blog id
+    blog_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = Bookmark
+        fields = ['id', 'blog', 'blog_id', 'created_at']

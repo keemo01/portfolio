@@ -135,7 +135,7 @@ const Blog = () => {
             } else {
                 setState(prev => ({
                     ...prev,
-                    error: 'Unable to delete blog. Please try again.'
+                    error: 'Unable to delete blog. Try again.'
                 }));
             }
         }
@@ -213,6 +213,31 @@ const Blog = () => {
         }
     };
 
+    // Bookmark handler
+    const handleBookmark = async (blogId) => {
+        try {
+          const res = await axios.post(
+            `${BASE_URL}/add-bookmark/${blogId}/`, 
+            {},
+            {
+              headers: {
+                'Authorization': `Bearer ${user.token}`,
+              }
+            }
+          );
+          alert(res.data.detail); // Display success message
+          
+        } catch (error) {
+          console.error("Error bookmarking blog:", error);
+          // Optionally, log detailed server response:
+          if (error.response) {
+            console.error("Server response:", error.response.data);
+          }
+          alert("Error bookmarking blog. Please try again.");
+        }
+      };
+      
+
     // Delay search while typing
     useEffect(() => {
         const timeoutId = setTimeout(() => {
@@ -256,18 +281,18 @@ const Blog = () => {
                             {state.searchResults.users?.length > 0 && (
                                 <div className="suggestion-section">
                                     <h4>Users</h4>
-                                    {state.searchResults.users.slice(0, 3).map(user => (
+                                    {state.searchResults.users.slice(0, 3).map(userItem => (
                                         <Link 
-                                            to={`/profile/${user.id}`} 
-                                            key={user.id} 
+                                            to={`/profile/${userItem.id}`} 
+                                            key={userItem.id} 
                                             className="suggestion-item"
                                             onClick={() => setState(prev => ({ ...prev, showSuggestions: false }))}
                                         >
                                             <span className="username">
-                                                {highlightText(user.username, state.searchQuery)}
+                                                {highlightText(userItem.username, state.searchQuery)}
                                             </span>
-                                            {user.email && (
-                                                <span className="email">{user.email}</span>
+                                            {userItem.email && (
+                                                <span className="email">{userItem.email}</span>
                                             )}
                                         </Link>
                                     ))}
@@ -304,16 +329,16 @@ const Blog = () => {
                             <div className="search-section">
                                 <h3>Users</h3>
                                 <div className="users-list">
-                                    {state.searchResults.users.map(user => (
+                                    {state.searchResults.users.map(userItem => (
                                         <Link 
-                                            to={`/profile/${user.id}`} 
-                                            key={user.id} 
+                                            to={`/profile/${userItem.id}`} 
+                                            key={userItem.id} 
                                             className="user-result"
                                         >
                                             <div className="user-item">
-                                                <span className="username">{highlightText(user.username, state.searchQuery)}</span>
-                                                {user.email && (
-                                                    <span className="email">{user.email}</span>
+                                                <span className="username">{highlightText(userItem.username, state.searchQuery)}</span>
+                                                {userItem.email && (
+                                                    <span className="email">{userItem.email}</span>
                                                 )}
                                             </div>
                                         </Link>
@@ -370,6 +395,15 @@ const Blog = () => {
                                                 <span className="author">
                                                     By <Link to={`/profile/${blog.author_id}`} className="author-link">{blog.author}</Link>
                                                 </span>
+                                                {/* Bookmark button */}
+                                                {user && (
+                                                    <button 
+                                                        className="bookmark-btn"
+                                                        onClick={() => handleBookmark(blog.id)}
+                                                    >
+                                                        Bookmark
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -443,6 +477,15 @@ const Blog = () => {
                                         <span className="author">
                                             By <Link to={`/profile/${blog.author_id}`} className="author-link">{blog.author}</Link>
                                         </span>
+                                        {/* Bookmark button */}
+                                        {user && (
+                                            <button 
+                                                className="bookmark-btn"
+                                                onClick={() => handleBookmark(blog.id)}
+                                            >
+                                                Bookmark
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))
