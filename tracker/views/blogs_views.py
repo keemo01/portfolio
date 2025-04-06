@@ -8,8 +8,8 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from tracker.models import Blog, BlogMedia
-from tracker.serializers import BlogSerializer, CommentSerializer
+from tracker.models import Blog, BlogMedia, Bookmark
+from tracker.serializers import BlogSerializer, BookmarkSerializer, CommentSerializer
 from tracker.models import Comment  
 from urllib.parse import urlencode
 
@@ -102,7 +102,7 @@ def user_blogs(request):
 @api_view(['GET', 'POST'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
-def blog_comments(request, blog_id):  # Changed parameter name to match URL
+def blog_comments(request, blog_id):  # blog_id is passed as a parameter
     blog = get_object_or_404(Blog, id=blog_id)
     if request.method == 'GET':
         # Get all comments, including the replies
@@ -137,3 +137,42 @@ def delete_comment(request, comment_id):
     comment.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
+
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def user_bookmarks(request):
+    bookmarks = Bookmark.objects.filter(user=request.user)
+    serializer = BookmarkSerializer(bookmarks, many=True, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def add_bookmark(request, blog_id):
+    try:
+        blog = Blog.objects.get(id=blog_id)
+    except Blog.DoesNotExist:
+        return Response({'detail': 'Blog not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    bookmark, created = Bookmark.objects.get_or_create(user=request.user, blog=blog)
+    if created:
+        serializer = BookmarkSerializer(bookmark, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response({'detail': 'Blog is already bookmarked'}, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def remove_bookmark(request, blog_id):
+    """
+    Remove a blog bookmark.
+    """
+    try:
+        bookmark = Bookmark.objects.get(user=request.user, blog__id=blog_id)
+        bookmark.delete()
+        return Response({'detail': 'Bookmark removed'}, status=status.HTTP_200_OK)
+    except Bookmark.DoesNotExist:
+        return Response({'detail': 'Bookmark does not exist'}, status=status.HTTP_404_NOT_FOUND)

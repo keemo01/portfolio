@@ -5,8 +5,11 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 # Import views from specific modules
 from .views import user_views, blogs_views, portfolio_views, search_views
+from . import views
 
 urlpatterns = [
+    
+    
     # User authentication routes
     path('signup/', user_views.signup, name='signup'),  # Route to sign up a new user
     path('auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
@@ -23,11 +26,12 @@ urlpatterns = [
     path('blogs/create/', blogs_views.create_blog, name='create_blog'),  # Route to create a new blog post
     path('blogs/delete/<int:blog_id>/', blogs_views.delete_blog, name='delete_blog'),  # Route to delete a blog post
     path('blogs/<int:pk>/', blogs_views.blog_detail, name='blog_detail'),  # Generic blog detail view
-    path('blogs/<int:blog_id>/comments/', blogs_views.blog_comments, name='blog_comments'),  # Changed pk to blog_id
+    path('blogs/<int:blog_id>/comments/', blogs_views.blog_comments, name='blog_comments'),  # Route to get comments for a blog post
 
     # User specific blog routes
     path('user-blogs/', user_views.user_blogs, name='user_blogs'),
-    path('user-blog/<int:blog_id>/', user_views.get_user_blog, name='get-user-blog'),  # Changed path
+    path('user-blog/<int:blog_id>/', user_views.get_user_blog, name='get-user-blog'),  
+    path('user-bookmarks/', views.user_bookmarks, name='user_bookmarks'),
 
     # Comment management route
     path('comments/<int:comment_id>/', blogs_views.delete_comment, name='delete_comment'),  # Route to delete a specific comment
@@ -51,9 +55,8 @@ urlpatterns = [
     path('user/<int:user_id>/posts/', user_views.get_user_posts, name='user-posts'),
     
     # Bookmark routes
-    path('bookmarks/', user_views.user_bookmarks, name='user_bookmarks'),
-    path('bookmarks/add/<int:blog_id>/', user_views.add_bookmark, name='add_bookmark'),
-    path('bookmarks/remove/<int:blog_id>/', user_views.remove_bookmark, name='remove_bookmark'),
+    path('add-bookmark/<int:blog_id>/', views.add_bookmark, name='add-bookmark'),
+    path('remove-bookmark/<int:blog_id>/', views.remove_bookmark, name='remove-bookmark'),
 ]
 
 # Serve media files in development

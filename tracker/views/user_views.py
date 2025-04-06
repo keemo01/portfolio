@@ -256,37 +256,3 @@ def verify_token(request):
             'status': 'error',
             'message': str(e)
         }, status=status.HTTP_400_BAD_REQUEST)
-        
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
-def add_bookmark(request, blog_id):
-    try:
-        blog = Blog.objects.get(id=blog_id)
-    except Blog.DoesNotExist:
-        return Response({'detail': 'Blog not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-    bookmark, created = Bookmark.objects.get_or_create(user=request.user, blog=blog)
-    if created:
-        return Response({'detail': 'Blog bookmarked successfully.'}, status=status.HTTP_201_CREATED)
-    return Response({'detail': 'Blog is already bookmarked.'}, status=status.HTTP_200_OK)
-
-@api_view(['DELETE'])
-@authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
-def remove_bookmark(request, blog_id):
-    try:
-        bookmark = Bookmark.objects.get(user=request.user, blog__id=blog_id)
-        bookmark.delete()
-        return Response({'detail': 'Bookmark removed successfully.'}, status=status.HTTP_200_OK)
-    except Bookmark.DoesNotExist:
-        return Response({'detail': 'Bookmark does not exist.'}, status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication])
-@permission_classes([IsAuthenticated])
-def user_bookmarks(request):
-    bookmarks = Bookmark.objects.filter(user=request.user).select_related('blog')
-    blogs = [bookmark.blog for bookmark in bookmarks]
-    serializer = BlogSerializer(blogs, many=True, context={'request': request})
-    return Response(serializer.data, status=status.HTTP_200_OK)
