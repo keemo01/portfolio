@@ -12,7 +12,7 @@ from rest_framework import status
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from tracker.models import PortfolioHolding, APIKey, PortfolioHistory
-from .binance_utils import get_binance_price  # Ensure proper error handling in this utility
+from .binance_utils import get_binance_price  
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ def get_bybit_holdings(api_key, secret_key):
             
             timestamp = str(int(time.time() * 1000))
             recv_window = "5000"
-            # Fix: Include parameters properly in signature
+            # Sort parameters for signature
             param_str = urlencode(sorted(params.items()))
             signature_str = timestamp + api_key + recv_window + param_str
             signature = hmac.new(secret_key.encode('utf-8'), signature_str.encode('utf-8'), hashlib.sha256).hexdigest()
@@ -94,13 +94,16 @@ def get_bybit_holdings(api_key, secret_key):
                             wallet_balance = float(coin_data.get('walletBalance', '0'))
                             if wallet_balance > 0:
                                 # Get the cost basis for this coin
-                                # Fix: We should use a dedicated function for cost basis to reduce nested complexity
-                                original_value = get_bybit_cost_basis(
-                                    api_key, 
-                                    secret_key, 
-                                    coin_data['coin'], 
-                                    wallet_balance
-                                )
+                                # Note: Spot holdings cannot have a cost basis only futures can have a return.
+                                try:
+                                    original_value = get_bybit_cost_basis(
+                                        api_key, 
+                                        secret_key, 
+                                        coin_data['coin'], 
+                                        wallet_balance
+                                    )
+                                except Exception:
+                                    original_value = None
                                 
                                 all_balances.append({
                                     'coin': coin_data['coin'],
@@ -119,11 +122,16 @@ def get_bybit_cost_basis(api_key, secret_key, coin, amount):
     """
     Get cost basis for a specific coin from Bybit
     Returns the original value or None if not available
+    Note: Cost basis isn't available for spot holdings, only return for futures
     """
+    # USDT is always $1.0
+    if coin.upper() == 'USDT':
+        return amount
+        
     try:
         cost_endpoint = "/v5/position/info"
         cost_params = {
-            "category": "spot",
+            "category": "linear",  # Changed from spot to linear
             "symbol": f"{coin}USDT"
         }
         
@@ -147,14 +155,19 @@ def get_bybit_cost_basis(api_key, secret_key, coin, amount):
             timeout=5
         )
         
+        if response.status_code != 200:
+            logger.debug("No position data available for %s (status code: %d)", coin, response.status_code)
+            return None
+            
         data = response.json()
         if data.get('retCode') == 0 and data.get('result', {}).get('list'):
             position = data['result']['list'][0]
             avg_price = float(position.get('avgPrice', '0'))
-            return amount * avg_price
+            if avg_price > 0:
+                return amount * avg_price
         return None
     except Exception as e:
-        logger.error("Error fetching cost basis for %s: %s", coin, e)
+        logger.debug("Could not fetch cost basis for %s: %s", coin, str(e))
         return None
 
 @api_view(['POST'])
@@ -209,7 +222,7 @@ def portfolio(request):
         
         if not has_binance and not has_bybit:
             logger.info("No active API keys found for user %s", user.username)
-            # Fix: Check for manual holdings before returning empty portfolio
+            # Check for manual holdings before returning empty portfolio
             if not PortfolioHolding.objects.filter(user=user).exists():
                 return Response({
                     'detail': 'No active API keys or manual holdings found',
@@ -219,7 +232,7 @@ def portfolio(request):
                     'errors': None
                 }, status=status.HTTP_200_OK)
     except APIKey.DoesNotExist:
-        # Fix: Check for manual holdings before returning empty portfolio
+        # Check for manual holdings before returning empty portfolio
         if not PortfolioHolding.objects.filter(user=user).exists():
             logger.info("API keys not configured for user %s", user.username)
             return Response({
@@ -267,7 +280,7 @@ def portfolio(request):
     # Fetch Exchange Holdings from Binance
     if api_keys.binance_api_key and api_keys.binance_secret_key:
         try:
-            # Fix: Add explicit timeout
+            # Add explicit timeout
             timestamp = str(int(time.time() * 1000))
             binance_params = { 'timestamp': timestamp, 'recvWindow': '5000' }
             query_string = urlencode(binance_params)
@@ -294,12 +307,12 @@ def portfolio(request):
                     if current_price:
                         portfolio_data.append({
                             'exchange': 'Binance',
-                            'account_type': 'Spot',  # Fix: Consistent account_type across all sources
+                            'account_type': 'Spot',  # Consistent account_type across all sources
                             'coin': balance['asset'],
                             'amount': str(amount),
                             'current_price': current_price,
                             'current_value': amount * current_price,
-                            'transferable': balance['free'],  # Fix: Include transferable amount
+                            'transferable': balance['free'],  # Include transferable amount
                             'original_value': None  # Binance doesn't provide cost basis
                         })
         except Exception as e:
@@ -310,7 +323,7 @@ def portfolio(request):
     manual_holdings = PortfolioHolding.objects.filter(user=user)
     manual_data = {}
     
-    # First pass: Form manual holdings
+    # Form manual holdings
     for holding in manual_holdings:
         coin = holding.coin.upper()
         amount = float(holding.amount)
@@ -326,12 +339,12 @@ def portfolio(request):
                 'total_cost': total_cost
             }
 
-    # Second pass: Calculate values and add to portfolio data
+    # Calculate values and add to portfolio data
     for coin, data in manual_data.items():
         total_amount = data['amount']
         total_cost = data['total_cost']
         
-        # Fix: Try both Bybit and Binance price sources
+        # Use consistent data structure with exchange holdings
         current_price = get_bybit_price(coin)
         if current_price is None:
             current_price = get_binance_price(coin)
@@ -369,18 +382,23 @@ def portfolio(request):
     # Save historical data
     coin_values = {}
     for item in portfolio_data:
-        coin = item['coin']
+        # Ensure coin keys are uppercase
+        coin_key = item['coin'].upper()  
         value = item['current_value']
-        if coin in coin_values:
-            coin_values[coin] += value
-        else:
-            coin_values[coin] = value
+        coin_values[coin_key] = coin_values.get(coin_key, 0) + value
 
-    # Create portfolio history record
+    # Save historical data with active exchanges info
+    active_exchanges = []
+    if api_keys.binance_api_key and api_keys.binance_secret_key:
+        active_exchanges.append('binance')
+    if api_keys.bybit_api_key and api_keys.bybit_secret_key:
+        active_exchanges.append('bybit')
+
     PortfolioHistory.objects.create(
         user=user,
         total_value=total_value,
-        coin_values=coin_values
+        coin_values={k.upper(): v for k, v in coin_values.items()},
+        active_exchanges=active_exchanges
     )
     
     return Response({
@@ -401,34 +419,45 @@ def portfolio_history(request):
     try:
         days = int(request.query_params.get('days', 30))
         if days <= 0:
-            days = 30  # Fix: Ensure positive days value
+            days = 30
     except ValueError:
         days = 30
     
+    # Get and normalize coin parameter
     coin = request.query_params.get('coin')
+    if coin:
+        coin = coin.upper()  # Normalize coin to uppercase
+    
     start_date = timezone.now() - timedelta(days=days)
     
-    # Fix: Add limit to avoid massive query results
+    # Get history records
     histories = PortfolioHistory.objects.filter(
         user=user, 
         timestamp__gte=start_date
-    ).order_by('timestamp')[:1000]  # Limit to 1000 records
+    ).order_by('timestamp')
 
     history_data = []
+    current_exchanges = set()
+    if hasattr(user, 'api_keys'):
+        if user.api_keys.binance_api_key:
+            current_exchanges.add('binance')
+        if user.api_keys.bybit_api_key:
+            current_exchanges.add('bybit')
+
     for record in histories:
         try:
-            if coin:
-                # Fix: Ensure coin is in uppercase
-                coin_values = record.coin_values or {}
-                coin_value = float(coin_values.get(coin.upper(), 0))
+            # Check if the record's exchanges match the current exchanges
+            record_exchanges = set(record.active_exchanges or [])
+            if record_exchanges == current_exchanges:
+                if coin:
+                    coin_values = record.coin_values or {}
+                    value = float(coin_values.get(coin, 0))
+                else:
+                    value = float(record.total_value)
+
                 history_data.append({
                     'timestamp': record.timestamp.isoformat(),
-                    'value': coin_value
-                })
-            else:
-                history_data.append({
-                    'timestamp': record.timestamp.isoformat(),
-                    'value': float(record.total_value)
+                    'value': value
                 })
         except (TypeError, ValueError) as e:
             logger.error(f"Error processing history record: {e}")
@@ -457,6 +486,9 @@ def manage_api_keys(request):
                     {'detail': 'Exchange parameter is required'}, 
                     status=status.HTTP_400_BAD_REQUEST
                 )
+            
+            # Delete all portfolio history records for the user
+            PortfolioHistory.objects.filter(user=request.user).delete()
             
             if exchange == 'binance':
                 api_keys.binance_api_key = ''

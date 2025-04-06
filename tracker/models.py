@@ -146,7 +146,16 @@ class PortfolioHistory(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
     total_value = models.DecimalField(max_digits=20, decimal_places=2)
-    coin_values = models.JSONField(default=dict, null=True)  # Add this field
+    coin_values = models.JSONField(default=dict, null=True)
+    active_exchanges = models.JSONField(default=list, help_text="List of active exchanges when this record was created")
+
+    def clean(self):
+        if self.coin_values:
+            self.coin_values = {k: v for k, v in self.coin_values.items() if v > 0}
+            
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     class Meta:
         ordering = ['-timestamp']
