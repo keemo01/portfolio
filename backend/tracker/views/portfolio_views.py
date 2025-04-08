@@ -480,7 +480,7 @@ def portfolio_history(request):
 
     return Response({'history': history_data}, status=status.HTTP_200_OK)
 
-# API key management
+# API key management 
 @api_view(['POST', 'GET', 'DELETE'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
@@ -489,7 +489,7 @@ def manage_api_keys(request):
     Manage API keys:
     - POST: Add/update keys
     - GET: Retrieve key status
-    - DELETE: Remove keys
+    - DELETE: Remove key
     """
     if request.method == 'DELETE':
         try:

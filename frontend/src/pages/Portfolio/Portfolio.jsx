@@ -13,7 +13,7 @@ const Portfolio = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('access_token');
 
-  // Validate the token and redirect to login if invalid or expired.
+  // Validate token and redirect if expired.
   const validateToken = useCallback(() => {
     if (!token) {
       navigate('/login');
@@ -34,13 +34,13 @@ const Portfolio = () => {
     }
   }, [token, navigate]);
 
-  // Portfolio states
+  // Portfolio state variables.
   const [portfolioData, setPortfolioData] = useState([]);
   const [totalValue, setTotalValue] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // API Keys Modal states
+  // API keys modal state.
   const [showApiModal, setShowApiModal] = useState(false);
   const [apiKeys, setApiKeys] = useState({
     binance_api_key: '',
@@ -52,7 +52,7 @@ const Portfolio = () => {
   const [savingKeys, setSavingKeys] = useState(false);
   const [apiError, setApiError] = useState(null);
   
-  // Historical chart and coin filter state
+  // Historical chart and coin filter state.
   const [historicalData, setHistoricalData] = useState([]);
   const [selectedCoin, setSelectedCoin] = useState("Combined");
 
@@ -62,7 +62,7 @@ const Portfolio = () => {
     exchange_distribution: {}
   });
 
-  // Helper function to format numbers
+  // Helper function for number formatting.
   const formatNumber = (num, decimals = 2) => {
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: decimals,
@@ -70,7 +70,7 @@ const Portfolio = () => {
     }).format(num);
   };
 
-  // Fetch portfolio data
+  // Fetch portfolio data.
   const fetchPortfolioData = useCallback(async () => {
     if (!validateToken()) return;
     
@@ -119,7 +119,7 @@ const Portfolio = () => {
     }
   }, [token, navigate, validateToken]);
 
-  // Fetch API key status
+  // Fetch API keys status.
   const fetchApiKeysStatus = useCallback(async () => {
     if (!validateToken()) return;
     try {
@@ -144,7 +144,7 @@ const Portfolio = () => {
     }
   }, [token, navigate, validateToken]);
 
-  // Fetch historical data for chart
+  // Fetch historical data for the chart.
   const fetchHistoricalData = useCallback(async (days = 30, coin = null) => {
     if (!validateToken()) return;
     try {
@@ -177,7 +177,6 @@ const Portfolio = () => {
     setSelectedCoin(coin);
   }, []);
 
-  // Optimize useEffect to prevent unnecessary reloads
   useEffect(() => {
     if (validateToken()) {
       fetchPortfolioData();
@@ -185,14 +184,15 @@ const Portfolio = () => {
     }
   }, [validateToken, fetchPortfolioData, fetchApiKeysStatus]);
 
-  // Separate effect for historical data
+  // When the selected coin changes, refetch historical data.
   useEffect(() => {
     if (validateToken() && selectedCoin) {
+      // The 'days' parameter will determine which snapshot type is returned by the backend.
       fetchHistoricalData(30, selectedCoin === "Combined" ? null : selectedCoin);
     }
   }, [validateToken, fetchHistoricalData, selectedCoin]);
 
-  // Handle API keys submission
+  // Handle API keys submission.
   const handleSubmitApiKeys = async (e) => {
     e.preventDefault();
     if (!validateToken()) return;
@@ -229,7 +229,7 @@ const Portfolio = () => {
     }
   };
 
-  // Handle removal of API keys
+  // Handle removal of API keys.
   const handleRemoveApiKeys = async (exchange) => {
     if (!validateToken()) return;
     setSavingKeys(true);
@@ -253,7 +253,7 @@ const Portfolio = () => {
           [`${exchange}_secret_key`]: ''
         }));
         
-        // Refresh portfolio data instead of clearing it
+        // Refresh portfolio and historical data.
         await fetchPortfolioData();
         await fetchHistoricalData(30, selectedCoin === "Combined" ? null : selectedCoin);
         setShowApiModal(false);
@@ -269,7 +269,7 @@ const Portfolio = () => {
     }
   };
 
-  // Get the coin icon (with a graceful fallback)
+  // Get coin icon with a fallback.
   const getCoinIcon = (symbol) => {
     if (!symbol) return null;
     const fallbackIcon = `data:image/svg+xml,${encodeURIComponent(`
@@ -290,7 +290,7 @@ const Portfolio = () => {
     return [...portfolioData].sort((a, b) => parseFloat(b.current_value) - parseFloat(a.current_value));
   }, [portfolioData]);
 
-  // Extract unique coin list for the filter buttons.
+  // Extract unique coin list for filter buttons.
   const uniqueCoins = useMemo(() => {
     const coins = new Set();
     sortedPortfolioData.forEach(holding => coins.add(holding.coin));
