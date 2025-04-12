@@ -4,7 +4,7 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 # Import views from specific modules
-from .views import user_views, blogs_views, portfolio_views, search_views
+from .views import user_views, blogs_views, portfolio_views, search_views, follow_views
 from . import views
 
 urlpatterns = [
@@ -57,6 +57,12 @@ urlpatterns = [
     # Bookmark routes
     path('add-bookmark/<int:blog_id>/', views.add_bookmark, name='add-bookmark'),
     path('remove-bookmark/<int:blog_id>/', views.remove_bookmark, name='remove-bookmark'),
+    
+    # Follow endpoints
+    path('follow/<int:user_id>/', follow_views.follow_user, name='follow_user'),
+    path('unfollow/<int:user_id>/', follow_views.unfollow_user, name='unfollow_user'),
+    path('user/<int:user_id>/followers/', follow_views.user_followers, name='user_followers'),
+    path('user/<int:user_id>/following/', follow_views.user_following, name='user_following'),
 ]
 
 # Serve media files in development

@@ -1,4 +1,3 @@
-# tasks.py
 import hmac
 import time
 import hashlib

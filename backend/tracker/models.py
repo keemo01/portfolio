@@ -1,14 +1,14 @@
-import hashlib
-from venv import logger
-from django.db import models
-from django.contrib.auth.models import User
 import base64
+import hashlib
+import logging
+import os
+import secrets
+
 from cryptography.fernet import Fernet
 from django.conf import settings
-import secrets
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-import os
-import logging
+from django.db import models
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +44,7 @@ class EncryptedTextField(models.TextField):
             logger.error(f"Encryption error for field: {str(e)}")
             raise ValidationError("Error encrypting value")
 
-from django.db import models
-from django.contrib.auth.models import User
+
 
 # Blog-related models for content management
 class Blog(models.Model):
@@ -169,4 +168,24 @@ class Bookmark(models.Model):
 
     def __str__(self):
         return f"{self.user.username} bookmarked '{self.blog.title}'"
+
+class Follow(models.Model):
+    follower = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='following'  # Users that I follow
+    )
+    following = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='followers'  # Users that follow me
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('follower', 'following')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.follower.username} follows {self.following.username}"
         
