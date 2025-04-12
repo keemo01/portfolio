@@ -215,10 +215,9 @@ def get_user_posts(request, user_id):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def get_user_profile(request, user_id):
-    # Get profile for a specific user
     try:
         user = User.objects.get(id=user_id)
-        serializer = UserSerializer(user)
+        serializer = UserSerializer(user, context={'current_user': request.user})
         return Response({
             'status': 'success',
             'data': serializer.data
@@ -228,11 +227,6 @@ def get_user_profile(request, user_id):
             'status': 'error',
             'message': 'User not found'
         }, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return Response({
-            'status': 'error',
-            'message': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
