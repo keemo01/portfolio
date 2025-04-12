@@ -74,7 +74,7 @@ def calculate_portfolio_metrics(consolidated_holdings):
                 'absolute': pnl_absolute,
                 'percentage': pnl_percentage,
                 'unrealized': pnl_absolute,  # Assuming unrealized is the same as absolute for now
-                'realized': Decimal('0')       # Will be updated when trade history is implemented
+                'realized': Decimal('0')       # Realized P&L is not tracked in this context
             }
         
         # Track exchange distribution
