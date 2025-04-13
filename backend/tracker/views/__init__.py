@@ -4,3 +4,4 @@ from .portfolio_views import *
 from .binance_utils import *
 from .search_views import *
 from .follow_views import *
+from .community_views import *
