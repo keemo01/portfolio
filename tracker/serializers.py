@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Blog, BlogMedia, Bookmark, Comment
+from .models import Blog, BlogMedia, Bookmark, Comment, Community
 
 class UserSerializer(serializers.ModelSerializer):
     firstName = serializers.CharField(source='first_name', required=True)
@@ -129,3 +129,9 @@ class BookmarkSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bookmark
         fields = ['id', 'blog', 'blog_id', 'created_at']
+
+class CommunitySerializer(serializers.ModelSerializer):
+    owner = serializers.ReadOnlyField(source='owner.username')
+    class Meta:
+        model = Community
+        fields = ['id', 'name', 'description', 'owner', 'created_at']
