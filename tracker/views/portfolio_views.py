@@ -17,6 +17,9 @@ from .portfolio_utils import aggregate_portfolio_holdings, calculate_portfolio_m
 
 logger = logging.getLogger(__name__)
 
+# Added a session to reuse HTTP connections for efficiency.
+session = requests.Session()  # Reusing session for all requests
+
 def get_bybit_price(coin):
     """
     Fetch the current price for a coin from Bybit's V5 API.
@@ -29,7 +32,7 @@ def get_bybit_price(coin):
     params = {"category": "spot", "symbol": f"{coin}USDT"}
     try:
         logger.info("Fetching Bybit price for %s with params: %s", coin, params)
-        response = requests.get(url, params=params, timeout=5)
+        response = session.get(url, params=params, timeout=5)  # Using session here
         if response.status_code == 200:
             data = response.json()
             if data.get("retCode") == 0 and data.get("result", {}).get("list"):
@@ -87,7 +90,7 @@ def get_bybit_holdings(api_key, secret_key):
             }
             
             try:
-                response = requests.get(url, headers=headers, params=params, timeout=10)
+                response = session.get(url, headers=headers, params=params, timeout=10)  # Using session here
                 if response.status_code == 200:
                     data = response.json()
                     if data.get('retCode') == 0:
@@ -121,9 +124,9 @@ def get_bybit_holdings(api_key, secret_key):
 
 def get_bybit_cost_basis(api_key, secret_key, coin, amount):
     """
-    Get cost basis for a specific coin from Bybit
-    Returns the original value or None if not available
-    Note: Cost basis isn't available for spot holdings, only return for futures
+    Get cost basis for a specific coin from Bybit.
+    Returns the original value or None if not available.
+    Note: Cost basis isn't available for spot holdings, only return for futures.
     """
     # USDT is always $1.0
     if coin.upper() == 'USDT':
@@ -149,7 +152,7 @@ def get_bybit_cost_basis(api_key, secret_key, coin, amount):
             'X-BAPI-RECV-WINDOW': recv_window
         }
         
-        response = requests.get(
+        response = session.get(
             f"https://api.bybit.com{cost_endpoint}", 
             headers=headers, 
             params=cost_params,
@@ -212,7 +215,7 @@ def add_holding(request):
 def portfolio(request):
     """
     GET or POST /api/portfolio/
-    Returns current portfolio holdings from exchanges and manual entries
+    Returns current portfolio holdings from exchanges and manual entries.
     """
     user = request.user
     try:
@@ -246,6 +249,9 @@ def portfolio(request):
 
     portfolio_data = []
     errors = []
+    
+    # Initialize a session for HTTP requests
+    price_cache = {}  # Cache for prices to avoid duplicate API calls
 
     # Fetch Exchange Holdings from Bybit
     if api_keys.bybit_api_key and api_keys.bybit_secret_key:
@@ -255,7 +261,12 @@ def portfolio(request):
                 for holding in holdings:
                     coin = holding['coin']
                     amount = float(holding['amount'])
-                    current_price = get_bybit_price(coin)
+                    # Use cached price if available
+                    if coin in price_cache:
+                        current_price = price_cache[coin]
+                    else:
+                        current_price = get_bybit_price(coin)
+                        price_cache[coin] = current_price
                     if current_price is not None:
                         value = amount * current_price
                         # Calculate original_value from API response or fall back to current value
@@ -269,7 +280,7 @@ def portfolio(request):
                             'current_price': current_price,
                             'current_value': value,
                             'transferable': str(holding['transferable']),
-                            'original_value': original_value  # Include original value if available
+                            'original_value': original_value  # Cost basis from Bybit
                         })
                         logger.info("Added %s from Bybit: %s @ $%s = $%s (original: $%s)", 
                                   coin, amount, current_price, value, original_value)
@@ -281,7 +292,7 @@ def portfolio(request):
     # Fetch Exchange Holdings from Binance
     if api_keys.binance_api_key and api_keys.binance_secret_key:
         try:
-            # Add explicit timeout
+            # Add explicit timeout and use session for efficiency
             timestamp = str(int(time.time() * 1000))
             binance_params = { 'timestamp': timestamp, 'recvWindow': '5000' }
             query_string = urlencode(binance_params)
@@ -297,23 +308,29 @@ def portfolio(request):
             }
             full_url = f"{binance_url}?{query_string}&signature={signature}"
             logger.info("Sending request to Binance: %s", full_url)
-            response = requests.get(full_url, headers=headers, timeout=10)
+            response = session.get(full_url, headers=headers, timeout=10)  # Using session here
             response.raise_for_status()
             
             data = response.json()
             for balance in data.get('balances', []):
                 amount = float(balance['free']) + float(balance['locked'])
                 if amount > 0:
-                    current_price = get_binance_price(balance['asset'])
+                    # Use cached price for Binance as well to avoid duplicate calls
+                    asset = balance['asset']
+                    if asset in price_cache:
+                        current_price = price_cache[asset]
+                    else:
+                        current_price = get_binance_price(asset)
+                        price_cache[asset] = current_price
                     if current_price:
                         portfolio_data.append({
                             'exchange': 'Binance',
                             'account_type': 'Spot',  # Consistent account_type across all sources
-                            'coin': balance['asset'],
+                            'coin': asset,
                             'amount': str(amount),
                             'current_price': current_price,
                             'current_value': amount * current_price,
-                            'transferable': balance['free'],  # Include transferable amount
+                            'transferable': balance['free'],  # I am including the transferable amount
                             'original_value': None  # Binance doesn't provide cost basis
                         })
         except Exception as e:
@@ -345,15 +362,17 @@ def portfolio(request):
         total_amount = data['amount']
         total_cost = data['total_cost']
         
-        # Use consistent data structure with exchange holdings
-        current_price = get_bybit_price(coin)
-        if current_price is None:
-            current_price = get_binance_price(coin)
-        
+        # Cached price if available, otherwise try both sources
+        if coin in price_cache:
+            current_price = price_cache[coin]
+        else:
+            current_price = get_bybit_price(coin)
+            if current_price is None:
+                current_price = get_binance_price(coin)
+            price_cache[coin] = current_price
+
         if current_price is not None:
             current_value = total_amount * current_price
-            
-            # Fix: Use consistent data structure with exchange holdings
             portfolio_data.append({
                 'exchange': 'Manual',
                 'account_type': 'Manual',
@@ -361,11 +380,10 @@ def portfolio(request):
                 'amount': str(total_amount),
                 'current_price': current_price,
                 'current_value': current_value,
-                'transferable': str(total_amount),  # All manual holdings are transferable
-                'original_value': total_cost  # Use total cost as original value
+                'transferable': str(total_amount),  # All manual holdings are transferable.
+                'original_value': total_cost  # Total cost as the original value.
             })
         else:
-            # Fix: Handle case when price is not available
             logger.warning("Could not fetch price for manual holding: %s", coin)
             errors.append(f"Could not fetch price for {coin}")
 
@@ -389,17 +407,17 @@ def portfolio(request):
 
     # Save historical data with aggregated values
     PortfolioHistory.objects.create(
-    user=user,
-    total_value=metrics['total_value'],
-    coin_values={k: float(v['total_value']) for k, v in consolidated.items()},
-    active_exchanges=[ex.lower() for ex in metrics['exchange_distribution'].keys()]
+        user=user,
+        total_value=metrics['total_value'],
+        coin_values={k: float(v['total_value']) for k, v in consolidated.items()},
+        active_exchanges=[ex.lower() for ex in metrics['exchange_distribution'].keys()]
     )
 
     # Calculate daily P&L
     target_time = timezone.now() - timedelta(hours=24)
     previous_record = PortfolioHistory.objects.filter(
         user=user, 
-        timestamp__lte=target_time # Filter for records older than 24 hours
+        timestamp__lte=target_time  # Filter for records older than 24 hours
     ).order_by('-timestamp').first()
     
     if previous_record and previous_record.total_value > 0:
@@ -457,7 +475,6 @@ def portfolio_history(request):
             current_exchanges.add('binance')
         if user.api_keys.bybit_api_key:
             current_exchanges.add('bybit')
-
 
     for record in histories:
         try:
@@ -583,7 +600,7 @@ def manage_api_keys(request):
                             hashlib.sha256
                         ).hexdigest()
                         params['signature'] = signature
-                        response = requests.get(
+                        response = session.get(  # Using session here
                             'https://api.binance.com/api/v3/account',
                             params=params,
                             headers={'X-MBX-APIKEY': binance_api_key},
@@ -615,7 +632,7 @@ def manage_api_keys(request):
                             'X-BAPI-RECV-WINDOW': recv_window
                         }
                         
-                        response = requests.get(
+                        response = session.get(  # Using session here
                             "https://api.bybit.com/v5/asset/transfer/query-account-coins-balance",
                             headers=headers,
                             params=params,
