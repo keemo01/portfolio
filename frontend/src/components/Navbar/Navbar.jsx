@@ -86,6 +86,7 @@ const handleLogout = async () => {
                     </>
                 )}
             </ul>
+
             <div className='nav-actions'>
                 <select onChange={currencyHandler}>
                     <option value="usd">USD</option>

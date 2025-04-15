@@ -18,10 +18,9 @@ const UserProvider = ({ children }) => {
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-
   const [loading, setLoading] = useState(true);
 
-  // Axios request interceptor to include JWT token
+  // Axios request interceptor to include JWT token in requests
   useEffect(() => {
     const interceptor = axios.interceptors.request.use(
       (config) => {
@@ -48,9 +47,10 @@ const UserProvider = ({ children }) => {
         const response = await axios.get(`${BASE_URL}/test-token/`);
         if (response?.data && response.data.user) {
           setUser({
-            id: response.data.user.id, // Ensure user ID is included
+            id: response.data.user.id,
             username: response.data.user.username,
-            email: response.data.user.email
+            email: response.data.user.email,
+            token: accessToken // store token for use in requests
           });
         }
       } catch (error) {
@@ -79,9 +79,10 @@ const UserProvider = ({ children }) => {
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
       setUser({
-        id: response.data.user.id, // Include user ID
+        id: response.data.user.id,
         username: response.data.user.username,
-        email: response.data.user.email
+        email: response.data.user.email,
+        token: response.data.access
       });
       return response.data;
     } catch (error) {
@@ -93,17 +94,18 @@ const UserProvider = ({ children }) => {
   // Login function
   const login = async (credentials) => {
     try {
-      const response = await axios.post(`${BASE_URL}/login/`, credentials);
+      const response = await axios.post(`${BASE_URL}/auth/login/`, credentials);
       const accessToken = response.data.access || response.data.access_token;
       const refreshToken = response.data.refresh || response.data.refresh_token;
       localStorage.setItem('access_token', accessToken);
       localStorage.setItem('refresh_token', refreshToken);
-      // Fetch user details after login using test-token endpoint
+      // Fetch user data after login
       const testResponse = await axios.get(`${BASE_URL}/test-token/`);
       const userData = {
-        id: testResponse.data.user.id, // Include user ID
+        id: testResponse.data.user.id,
         username: testResponse.data.user.username,
-        email: testResponse.data.user.email
+        email: testResponse.data.user.email,
+        token: accessToken
       };
       setUser(userData);
       return response.data;
@@ -139,7 +141,7 @@ const UserProvider = ({ children }) => {
       return null;
     }
     try {
-      const response = await axios.post(`${BASE_URL}/token/refresh/`, {
+      const response = await axios.post(`${BASE_URL}/auth/refresh/`, {
         refresh: refreshToken
       });
       localStorage.setItem('access_token', response.data.access);
@@ -151,9 +153,7 @@ const UserProvider = ({ children }) => {
     }
   };
 
-  // Response interceptor to handle 401 errors
-  // and refresh the token if needed
-  // This interceptor will retry the request with a new access token
+  // Interceptor for handling 401 errors and refreshing token
   useEffect(() => {
     const responseInterceptor = axios.interceptors.response.use(
       (response) => response,

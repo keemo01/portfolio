@@ -188,39 +188,19 @@ class Follow(models.Model):
 
     def __str__(self):
         return f"{self.follower.username} follows {self.following.username}"
-    
 
-class Community(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_communities')
+class Like(models.Model):
+    """
+    Stores a like linking a user to a blog post.
+    Ensures that each blog can be liked only once per user.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')
+    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='likes')
     created_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return self.name
 
-class CommunityMembership(models.Model):
-    MEMBER_ROLE_CHOICES = (
-        ('admin', 'Admin'),
-        ('moderator', 'Moderator'),
-        ('member', 'Member'),
-    )
-    community = models.ForeignKey(Community, on_delete=models.CASCADE, related_name='memberships')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='community_memberships')
-    role = models.CharField(max_length=10, choices=MEMBER_ROLE_CHOICES, default='member')
-    joined_at = models.DateTimeField(auto_now_add=True)
-    
     class Meta:
-        unique_together = ('community', 'user')
+        unique_together = ('user', 'blog')
+        ordering = ['-created_at']
 
-class CommunityPost(models.Model):
-    community = models.ForeignKey(Community, on_delete=models.CASCADE, related_name='posts')
-    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='community_posts')
-    title = models.CharField(max_length=200)
-    content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    
     def __str__(self):
-        return self.title
-        
+        return f"{self.user.username} liked '{self.blog.title}'"

@@ -15,6 +15,7 @@ import { UserProvider } from './context/UserContext';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
+
 const App = () => {
     return (
         <AuthProvider>

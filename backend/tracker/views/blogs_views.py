@@ -8,7 +8,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from tracker.models import Blog, BlogMedia, Bookmark
+from tracker.models import Blog, BlogMedia, Bookmark, Like
 from tracker.serializers import BlogSerializer, BookmarkSerializer, CommentSerializer
 from tracker.models import Comment  
 from urllib.parse import urlencode
@@ -176,3 +176,34 @@ def remove_bookmark(request, blog_id):
         return Response({'detail': 'Bookmark removed'}, status=status.HTTP_200_OK)
     except Bookmark.DoesNotExist:
         return Response({'detail': 'Bookmark does not exist'}, status=status.HTTP_404_NOT_FOUND)
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def like_post(request, blog_id):
+
+
+    try:
+        blog = Blog.objects.get(pk=blog_id)
+    except Blog.DoesNotExist:
+        return JsonResponse({'detail': 'Blog not found.'}, status=404)
+
+    user = request.user
+    like, created = Like.objects.get_or_create(user=user, blog=blog)
+
+    if not created:
+        # If like already exists, delete it (toggle off)
+        like.delete()
+        return JsonResponse({'detail': 'Unliked successfully.'}, status=200)
+    else:
+        # New like created
+        return JsonResponse({'detail': 'Liked successfully.'}, status=201)
+
+@api_view(['GET'])
+def like_count(request, blog_id):
+    try:
+        blog = Blog.objects.get(pk=blog_id)
+    except Blog.DoesNotExist:
+        return JsonResponse({'detail': 'Blog not found.'}, status=404)
+
+    count = blog.likes.count()
+    return JsonResponse({'like_count': count}, status=200)

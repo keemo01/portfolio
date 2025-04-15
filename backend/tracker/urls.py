@@ -27,6 +27,10 @@ urlpatterns = [
     path('blogs/delete/<int:blog_id>/', blogs_views.delete_blog, name='delete_blog'),  # Route to delete a blog post
     path('blogs/<int:pk>/', blogs_views.blog_detail, name='blog_detail'),  # Generic blog detail view
     path('blogs/<int:blog_id>/comments/', blogs_views.blog_comments, name='blog_comments'),  # Route to get comments for a blog post
+    
+    # Blog Likes 
+    path('blogs/<int:blog_id>/like/', blogs_views.like_post, name='like_post'), # Like a blog post
+    path('blogs/<int:blog_id>/like/count/', blogs_views.like_count, name='blog_like_count'),# Get the like count for a blog post
 
     # User specific blog routes
     path('user-blogs/', user_views.user_blogs, name='user_blogs'),
@@ -63,6 +67,7 @@ urlpatterns = [
     path('unfollow/<int:user_id>/', follow_views.unfollow_user, name='unfollow_user'),
     path('user/<int:user_id>/followers/', follow_views.user_followers, name='user_followers'),
     path('user/<int:user_id>/following/', follow_views.user_following, name='user_following'),
+    
 ]
 
 # Serve media files in development

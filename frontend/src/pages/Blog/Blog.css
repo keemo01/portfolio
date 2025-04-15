@@ -925,3 +925,48 @@ mark {
     background-color: #004085; /* Even darker blue for active state */
   }
   
+/* Container for the like button and count */
+.like-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* Rectangular like button styling */
+.like-btn {
+    background: #f2f2f2;
+    border: 2px solid transparent;
+    border-radius: 4px; /* Subtle rounding for a rectangular shape */
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #262626;
+    transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+/* Liked state: a subtle blue highlight */
+.like-btn.liked {
+    background-color: #d0eaff; /* Soft blue background */
+    border-color: #007bff;      /* Blue border when liked */
+    color: #007bff;             /* Accent text color */
+}
+
+/* Hover effect for better interactivity */
+.like-btn:hover {
+    transform: scale(1.05);
+    background-color: #eaeaea;
+}
+
+/* Active state: slightly scale down */
+.like-btn:active {
+    transform: scale(0.98);
+}
+
+/* Styling for the like count */
+.like-count {
+    font-size: 0.9rem;
+    color: #8e8e8e;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
