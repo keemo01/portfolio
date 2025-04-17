@@ -3,12 +3,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-# Import views from specific modules
+# Views from specific modules
 from .views import user_views, blogs_views, portfolio_views, search_views, follow_views
 from . import views
 
 urlpatterns = [
-    
     
     # User authentication routes
     path('signup/', user_views.signup, name='signup'),  # Route to sign up a new user
