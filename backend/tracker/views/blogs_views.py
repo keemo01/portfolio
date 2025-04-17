@@ -1,17 +1,18 @@
+from urllib.parse import urlencode
+
 import requests
 from django.http import JsonResponse
-from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.decorators import api_view, authentication_classes, permission_classes, parser_classes
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
+from rest_framework import status
+from rest_framework.authentication import SessionAuthentication, TokenAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes, parser_classes
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from tracker.models import Blog, BlogMedia, Bookmark, Like
+
+from tracker.models import Blog, BlogMedia, Bookmark, Comment, Like
 from tracker.serializers import BlogSerializer, BookmarkSerializer, CommentSerializer
-from tracker.models import Comment  
-from urllib.parse import urlencode
 
 # Blog Endpoints
 @api_view(['GET'])
@@ -199,11 +200,22 @@ def like_post(request, blog_id):
         return JsonResponse({'detail': 'Liked successfully.'}, status=201)
 
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication, SessionAuthentication])
+@permission_classes([AllowAny])
 def like_count(request, blog_id):
+    """
+    Returns total like_count, and `liked: true|false` if the request is authenticated.
+    """
     try:
         blog = Blog.objects.get(pk=blog_id)
     except Blog.DoesNotExist:
         return JsonResponse({'detail': 'Blog not found.'}, status=404)
 
     count = blog.likes.count()
-    return JsonResponse({'like_count': count}, status=200)
+    liked = False
+    # If the user sent valid JWT/session cookie, check if they've liked this blog
+    user = request.user
+    if user and user.is_authenticated:
+        liked = blog.likes.filter(user=user).exists()
+
+    return JsonResponse({'like_count': count, 'liked': liked}, status=200)

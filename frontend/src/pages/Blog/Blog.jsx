@@ -17,9 +17,9 @@ const formatDateTime = (dateString) => {
 const highlightText = (text, query) => {
   if (!query) return text;
   const parts = text.split(new RegExp(`(${query})`, 'gi'));
-  return parts.map((part, index) => 
-    part.toLowerCase() === query.toLowerCase() 
-      ? <mark key={index}>{part}</mark> 
+  return parts.map((part, index) =>
+    part.toLowerCase() === query.toLowerCase()
+      ? <mark key={index}>{part}</mark>
       : part
   );
 };
@@ -56,11 +56,17 @@ const Blog = () => {
       const updatedLikeData = {};
       await Promise.all(
         blogs.map(async (blog) => {
+          const config = user
+            ? { headers: { Authorization: `Bearer ${user.token}` } }
+            : {};
           try {
-            const res = await axios.get(`${BASE_URL}/blogs/${blog.id}/like/count/`);
-            updatedLikeData[blog.id] = { 
-              likeCount: res.data.like_count, 
-              liked: false // default value; toggled when user clicks the button
+            const res = await axios.get(
+              `${BASE_URL}/blogs/${blog.id}/like/count/`,
+              config
+            );
+            updatedLikeData[blog.id] = {
+              likeCount: res.data.like_count,
+              liked: res.data.liked
             };
           } catch (error) {
             updatedLikeData[blog.id] = { likeCount: 0, liked: false };
@@ -116,6 +122,15 @@ const Blog = () => {
     };
   }, []);
 
+  // When the user logs in/out restart your like state
+  useEffect(() => {
+    if (user) {
+      fetchBlogs();            // fetch blogs again to get updated like counts
+    } else {
+      setLikeData({});         //  reset like data
+    }
+  }, [user]);
+
   // Search handler with a slight delay
   const handleSearch = async (query) => {
     setState(prev => ({
@@ -123,7 +138,7 @@ const Blog = () => {
       searchQuery: query,
       showSuggestions: query.length > 0
     }));
-    
+
     if (!query.trim()) {
       setState(prev => ({
         ...prev,
@@ -156,7 +171,7 @@ const Blog = () => {
   const handleBookmark = async (blogId) => {
     try {
       const res = await axios.post(
-        `${BASE_URL}/add-bookmark/${blogId}/`, 
+        `${BASE_URL}/add-bookmark/${blogId}/`,
         {},
         {
           headers: {
@@ -180,7 +195,7 @@ const Blog = () => {
     if (!confirmDelete) return;
     try {
       await axios.delete(`${BASE_URL}/blogs/delete/${blogId}/`, {
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${user.token}`,
           'Content-Type': 'application/json'
         },
@@ -214,7 +229,7 @@ const Blog = () => {
     state.media.forEach((file) => {
       formData.append('media', file);
     });
-    
+
     try {
       await axios.post(`${BASE_URL}/blogs/create/`, formData, {
         headers: {
@@ -254,37 +269,32 @@ const Blog = () => {
   };
 
   // Toggle like functionality for a blog post
-    const toggleLike = async (blogId) => {
-        if (!user) {
-        alert("Please log in to like posts.");
-        return;
+  const toggleLike = async (blogId) => {
+    if (!user) {
+      alert("Please log in to like posts.");
+      return;
+    }
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      // Send a request to toggle the like status
+      await axios.post(`${BASE_URL}/blogs/${blogId}/like/`, {}, config);
+      // Fetch the updated like count + liked flag
+      const countRes = await axios.get(
+        `${BASE_URL}/blogs/${blogId}/like/count/`,
+        config
+      );
+      setLikeData(prev => ({
+        ...prev,
+        [blogId]: {
+          likeCount: countRes.data.like_count,
+          liked: countRes.data.liked
         }
-        try {
-        // Check if the user has already liked the post
-        const currentLiked = likeData[blogId]?.liked || false;
-        // Send a request to toggle the like status
-        await axios.post(`${BASE_URL}/blogs/${blogId}/like/`, {}, {
-            headers: {
-            'Authorization': `Bearer ${user.token}`
-            }
-        });
-        // Update the local state
-        const newLiked = !currentLiked;
-        // Fetch the updated like count
-        const countRes = await axios.get(`${BASE_URL}/blogs/${blogId}/like/count/`);
-        setLikeData(prev => ({
-            ...prev,
-            [blogId]: {
-            likeCount: countRes.data.like_count,
-            liked: newLiked
-            }
-        }));
-        } catch (error) {
-        console.error("Error toggling like:", error);
-        alert("Error processing like. Please try again.");
-        }
-    };
-  
+      }));
+    } catch (error) {
+      console.error("Error toggling like:", error);
+      alert("Error processing like. Please try again.");
+    }
+  };
 
   // Delay search while typing
   useEffect(() => {
@@ -295,7 +305,7 @@ const Blog = () => {
   }, [state.searchQuery]);
 
   // Filter blogs locally based on the search query (if not using API results)
-  const filteredBlogs = state.blogs.filter(blog => 
+  const filteredBlogs = state.blogs.filter(blog =>
     blog.title.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
     blog.content.toLowerCase().includes(state.searchQuery.toLowerCase())
   );
@@ -316,16 +326,16 @@ const Blog = () => {
             onChange={(e) => handleSearch(e.target.value)}
             onFocus={() => setState(prev => ({ ...prev, showSuggestions: true }))}
           />
-          
+
           {state.showSuggestions && state.searchQuery && (
             <div className="search-suggestions">
               {state.searchResults.users?.length > 0 && (
                 <div className="suggestion-section">
                   <h4>Users</h4>
                   {state.searchResults.users.slice(0, 3).map(userItem => (
-                    <Link 
-                      to={`/profile/${userItem.id}`} 
-                      key={userItem.id} 
+                    <Link
+                      to={`/profile/${userItem.id}`}
+                      key={userItem.id}
                       className="suggestion-item"
                       onClick={() => setState(prev => ({ ...prev, showSuggestions: false }))}
                     >
@@ -339,14 +349,13 @@ const Blog = () => {
                   ))}
                 </div>
               )}
-
               {state.searchResults.blogs?.length > 0 && (
                 <div className="suggestion-section">
                   <h4>Posts</h4>
                   {state.searchResults.blogs.slice(0, 3).map(blog => (
-                    <Link 
-                      to={`/blog/${blog.id}`} 
-                      key={blog.id} 
+                    <Link
+                      to={`/blog/${blog.id}`}
+                      key={blog.id}
                       className="suggestion-item"
                       onClick={() => setState(prev => ({ ...prev, showSuggestions: false }))}
                     >
@@ -369,9 +378,9 @@ const Blog = () => {
                 <h3>Users</h3>
                 <div className="users-list">
                   {state.searchResults.users.map(userItem => (
-                    <Link 
-                      to={`/profile/${userItem.id}`} 
-                      key={userItem.id} 
+                    <Link
+                      to={`/profile/${userItem.id}`}
+                      key={userItem.id}
                       className="user-result"
                     >
                       <div className="user-item">
@@ -385,7 +394,6 @@ const Blog = () => {
                 </div>
               </div>
             )}
-
             {state.searchResults.blogs && state.searchResults.blogs.length > 0 && (
               <div className="search-section">
                 <h3>Posts</h3>
@@ -397,7 +405,7 @@ const Blog = () => {
                           <h3>{highlightText(blog.title, state.searchQuery)}</h3>
                         </Link>
                         {user && user.username === blog.author && (
-                          <button 
+                          <button
                             className="delete-btn"
                             onClick={() => handleDeleteBlog(blog.id)}
                           >
@@ -408,8 +416,8 @@ const Blog = () => {
 
                       <Link to={`/blog/${blog.id}`} className="post-content-link">
                         <p>
-                          {blog.content.length > 150 
-                            ? `${blog.content.substring(0, 150)}...` 
+                          {blog.content.length > 150
+                            ? `${blog.content.substring(0, 150)}...`
                             : blog.content}
                         </p>
                       </Link>
@@ -417,35 +425,34 @@ const Blog = () => {
                       <div className="post-footer">
                         <span>{formatDateTime(blog.created_at)}</span>
                         <span className="author">
-                            By <Link to={`/profile/${blog.author_id}`} className="author-link">{blog.author}</Link>
+                          By <Link to={`/profile/${blog.author_id}`} className="author-link">{blog.author}</Link>
                         </span>
                         {user && (
-                            <>
-                            <button 
-                                className="bookmark-btn"
-                                onClick={() => handleBookmark(blog.id)}
+                          <>
+                            <button
+                              className="bookmark-btn"
+                              onClick={() => handleBookmark(blog.id)}
                             >
-                                Bookmark
+                              Bookmark
                             </button>
                             <div className="like-container">
-                                <button 
-                                className={`like-btn ${likeData[blog.id]?.liked ? 'liked' : ''}`} 
+                              <button
+                                className={`like-btn ${likeData[blog.id]?.liked ? 'liked' : ''}`}
                                 onClick={() => toggleLike(blog.id)}
                                 aria-label="Like"
-                                ></button>
-                                <span className="like-count">
+                              ></button>
+                              <span className="like-count">
                                 {likeData[blog.id]?.likeCount || 0}
-                                </span>
+                              </span>
                             </div>
-                            </>
+                          </>
                         )}
-                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-
             {(!state.searchResults.users?.length && !state.searchResults.blogs?.length) && (
               <div className="no-results">
                 No matching users or posts found
@@ -469,7 +476,7 @@ const Blog = () => {
                       <h3>{blog.title}</h3>
                     </Link>
                     {user && user.username === blog.author && (
-                      <button 
+                      <button
                         className="delete-btn"
                         onClick={() => handleDeleteBlog(blog.id)}
                       >
@@ -480,8 +487,8 @@ const Blog = () => {
 
                   <Link to={`/blog/${blog.id}`} className="post-content-link">
                     <p>
-                      {blog.content.length > 150 
-                        ? `${blog.content.substring(0, 150)}...` 
+                      {blog.content.length > 150
+                        ? `${blog.content.substring(0, 150)}...`
                         : blog.content}
                     </p>
                   </Link>
@@ -494,8 +501,8 @@ const Blog = () => {
                           Your browser does not support videos.
                         </video>
                       ) : (
-                        <img 
-                          src={blog.media[0].file} 
+                        <img
+                          src={blog.media[0].file}
                           alt={`Preview for ${blog.title}`}
                           className="media-preview"
                         />
@@ -513,7 +520,7 @@ const Blog = () => {
                     </span>
                     {user && (
                       <>
-                        <button 
+                        <button
                           className="bookmark-btn"
                           onClick={() => handleBookmark(blog.id)}
                         >
@@ -539,7 +546,7 @@ const Blog = () => {
 
         {user && (
           <>
-            <button 
+            <button
               className={`fab ${state.isFormOpen ? 'fab-close' : ''}`}
               onClick={() => setState(prev => ({ ...prev, isFormOpen: !prev.isFormOpen }))}
               aria-label="Create new post"
@@ -550,7 +557,7 @@ const Blog = () => {
               <div className="modal-overlay">
                 <form className="create-blog-form" onSubmit={handleCreateBlog}>
                   <div className="form-header">
-                    <button 
+                    <button
                       type="button"
                       className="close-button"
                       onClick={() => setState(prev => ({ ...prev, isFormOpen: false }))}
@@ -587,7 +594,7 @@ const Blog = () => {
                       <div className="media-upload">
                         <label className="media-label">
                           <i className="far fa-image"></i>
-                          <input 
+                          <input
                             type="file"
                             accept="image/*,video/*"
                             multiple
@@ -602,12 +609,12 @@ const Blog = () => {
                           </span>
                         )}
                       </div>
-                      
+
                       {state.mediaPreview.length > 0 && (
                         <div className="media-preview-grid">
                           {state.mediaPreview.map((file, index) => (
                             <div key={index} className="preview-item">
-                              <button 
+                              <button
                                 className="remove-media"
                                 onClick={() => {
                                   setState(prev => ({
@@ -625,8 +632,8 @@ const Blog = () => {
                                   Your browser does not support videos.
                                 </video>
                               ) : (
-                                <img 
-                                  src={file.url} 
+                                <img
+                                  src={file.url}
                                   alt={`Preview ${index + 1}`}
                                   className="preview-content"
                                 />
@@ -634,12 +641,12 @@ const Blog = () => {
                             </div>
                           ))}
                         </div>
-                      )}
+                      )}  
                     </div>
                   </div>
                   <div className="form-footer">
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       className="publish-button"
                       disabled={!state.title.trim() || !state.content.trim()}
                     >
