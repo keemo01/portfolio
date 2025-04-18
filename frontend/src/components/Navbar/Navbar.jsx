@@ -79,10 +79,10 @@ const handleLogout = async () => {
             <ul>
                 <Link to={'/'}><li>Home</li></Link>
                 <li>Features</li>
-                <li>Pricing</li>
                 {user && (
                     <>
                         <li><Link to="/blog">Blog</Link></li>
+                        <li><Link to="/analysis">Analysis</Link></li>
                     </>
                 )}
             </ul>

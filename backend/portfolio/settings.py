@@ -162,6 +162,19 @@ CACHES = {
     }
 }
 
+# Cache settings
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler'},
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG', 
+    },
+}
+
 
 # Add this to handle MySQL strict mode
 SILENCED_SYSTEM_CHECKS = ['mysql.E001']
