@@ -1,199 +1,140 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 
-const BASE_URL = 'http://127.0.0.1:8000/api';
+const BASE_URL = 'http://127.0.0.1:8000/api/auth';
 
-const UserContext = createContext({
+// create and export the context
+export const UserContext = createContext({
   user: null,
-  setUser: () => console.warn('No UserProvider found'),
   loading: true,
-  login: () => {},
+  login:  () => {},
   logout: () => {},
-  signup: () => {}
+  signup: () => {},
 });
 
-const UserProvider = ({ children }) => {
-  // Initialize user state from localStorage
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
+export const UserProvider = ({ children }) => {
+  const [user, setUser]     = useState(() => {
+    const saved = localStorage.getItem('user');
+    return saved ? JSON.parse(saved) : null;
   });
   const [loading, setLoading] = useState(true);
 
-  // Axios request interceptor to include JWT token in requests
+  // Attach token to every request
   useEffect(() => {
-    const interceptor = axios.interceptors.request.use(
-      (config) => {
-        const accessToken = localStorage.getItem('access_token');
-        if (accessToken) {
-          config.headers.Authorization = `Bearer ${accessToken}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-    return () => axios.interceptors.request.eject(interceptor);
+    const i = axios.interceptors.request.use(cfg => {
+      const t = localStorage.getItem('access_token');
+      if (t) cfg.headers.Authorization = `Bearer ${t}`;
+      return cfg;
+    });
+    return () => axios.interceptors.request.eject(i);
   }, []);
 
-  // Token verification on initial load
+  // Verify token on load
   useEffect(() => {
-    const verifyToken = async () => {
-      const accessToken = localStorage.getItem('access_token');
-      if (!accessToken) {
-        setLoading(false);
-        return;
-      }
+    const verify = async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) return setLoading(false);
+
       try {
-        const response = await axios.get(`${BASE_URL}/test-token/`);
-        if (response?.data && response.data.user) {
-          setUser({
-            id: response.data.user.id,
-            username: response.data.user.username,
-            email: response.data.user.email,
-            token: accessToken // store token for use in requests
-          });
-        }
-      } catch (error) {
-        console.error('Token verification error:', error);
-        logout();
+        const { data } = await axios.get(`${BASE_URL}/test-token/`);
+        setUser({ ...data.user, token });
+      } catch {
+        handleLogout();
       } finally {
         setLoading(false);
       }
     };
-    verifyToken();
+    verify();
   }, []);
 
-  // Update localStorage when user state changes
+  // Keep localStorage in sync
   useEffect(() => {
-    if (user) {
-      localStorage.setItem('user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('user');
-    }
+    if (user) localStorage.setItem('user', JSON.stringify(user));
+    else     localStorage.removeItem('user');
   }, [user]);
 
-  // Signup function
-  const signup = async (userData) => {
-    try {
-      const response = await axios.post(`${BASE_URL}/signup/`, userData);
-      localStorage.setItem('access_token', response.data.access);
-      localStorage.setItem('refresh_token', response.data.refresh);
-      setUser({
-        id: response.data.user.id,
-        username: response.data.user.username,
-        email: response.data.user.email,
-        token: response.data.access
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Signup error:', error);
-      throw error;
-    }
+  // Handle signup, login, and logout
+  const handleSignup = async (creds) => {
+    const { data } = await axios.post(`${BASE_URL}/signup/`, creds);
+    localStorage.setItem('access_token', data.access);
+    localStorage.setItem('refresh_token', data.refresh);
+    setUser({ ...data.user, token: data.access });
+    return data;
   };
 
-  // Login function
-  const login = async (credentials) => {
-    try {
-      const response = await axios.post(`${BASE_URL}/auth/login/`, credentials);
-      const accessToken = response.data.access || response.data.access_token;
-      const refreshToken = response.data.refresh || response.data.refresh_token;
-      localStorage.setItem('access_token', accessToken);
-      localStorage.setItem('refresh_token', refreshToken);
-      // Fetch user data after login
-      const testResponse = await axios.get(`${BASE_URL}/test-token/`);
-      const userData = {
-        id: testResponse.data.user.id,
-        username: testResponse.data.user.username,
-        email: testResponse.data.user.email,
-        token: accessToken
-      };
-      setUser(userData);
-      return response.data;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
+  const handleLogin = async (creds) => {
+    const { data } = await axios.post(`${BASE_URL}/login/`, creds);
+    localStorage.setItem('access_token', data.access);
+    localStorage.setItem('refresh_token', data.refresh);
+    const { data: verifyData } = await axios.get(`${BASE_URL}/test-token/`);
+    setUser({ ...verifyData.user, token: data.access });
+    return data;
   };
 
-  // Logout function
-  const logout = async () => {
-    try {
-      const refreshToken = localStorage.getItem('refresh_token');
-      await axios.post(`${BASE_URL}/logout/`, { refresh_token: refreshToken });
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
-      setUser(null);
-    } catch (error) {
-      console.error('Logout error:', error);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
-      setUser(null);
+  const handleLogout = async () => {
+    const refresh = localStorage.getItem('refresh_token');
+    if (refresh) {
+      await axios.post(`${BASE_URL}/logout/`, { refresh });
     }
+    localStorage.clear();
+    setUser(null);
   };
 
-  // Token refresh mechanism
-  const refreshTokenFunc = async () => {
-    const refreshToken = localStorage.getItem('refresh_token');
-    if (!refreshToken) {
-      logout();
-      return null;
-    }
-    try {
-      const response = await axios.post(`${BASE_URL}/auth/refresh/`, {
-        refresh: refreshToken
-      });
-      localStorage.setItem('access_token', response.data.access);
-      return response.data.access;
-    } catch (error) {
-      console.error('Token refresh error:', error);
-      logout();
-      return null;
-    }
-  };
-
-  // Interceptor for handling 401 errors and refreshing token
+  // Auto‐refresh 401s
   useEffect(() => {
-    const responseInterceptor = axios.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        const originalRequest = error.config;
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          originalRequest._retry = true;
-          const newAccessToken = await refreshTokenFunc();
-          if (newAccessToken) {
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-            return axios(originalRequest);
-          }
+    const respI = axios.interceptors.response.use(
+      r => r,
+      async err => {
+        const orig = err.config;
+        if (err.response?.status === 401 && !orig._retry) {
+          orig._retry = true;
+          const rTok = localStorage.getItem('refresh_token');
+          const { data } = await axios.post(`${BASE_URL}/refresh/`, { refresh: rTok });
+          localStorage.setItem('access_token', data.access);
+          orig.headers.Authorization = `Bearer ${data.access}`;
+          return axios(orig);
         }
-        return Promise.reject(error);
+        return Promise.reject(err);
       }
     );
-    return () => axios.interceptors.response.eject(responseInterceptor);
+    return () => axios.interceptors.response.eject(respI);
   }, []);
 
+  // Auto‐refresh 403s
+  useEffect(() => {
+    const respI = axios.interceptors.response.use(
+      r => r,
+      async err => {
+        const orig = err.config;
+        if (err.response?.status === 403 && !orig._retry) {
+          orig._retry = true;
+          const rTok = localStorage.getItem('refresh_token');
+          const { data } = await axios.post(`${BASE_URL}/refresh/`, { refresh: rTok });
+          localStorage.setItem('access_token', data.access);
+          orig.headers.Authorization = `Bearer ${data.access}`;
+          return axios(orig);
+        }
+        return Promise.reject(err);
+      }
+    );
+    return () => axios.interceptors.response.eject(respI);
+  }, []);
+  // Provide context to children
   return (
-    <UserContext.Provider value={{ 
-      user, 
-      setUser, 
-      loading, 
-      login, 
-      logout,
-      signup,
-      refreshToken: refreshTokenFunc 
+    <UserContext.Provider value={{
+      user,
+      loading,
+      signup: handleSignup,
+      login:  handleLogin,
+      logout: handleLogout
     }}>
       {!loading && children}
     </UserContext.Provider>
   );
 };
 
-const useUser = () => {
-  const context = useContext(UserContext);
-  if (!context) {
-    throw new Error('useUser must be used within a UserProvider');
-  }
-  return context;
+export const useUser = () => {
+  const ctx = useContext(UserContext);
+  if (!ctx) throw new Error('useUser must be used within a UserProvider');
+  return ctx;
 };
-
-export { UserContext, UserProvider, useUser };

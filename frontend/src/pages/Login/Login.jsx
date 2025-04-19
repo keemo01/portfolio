@@ -13,16 +13,17 @@ const Login = () => {
   const navigate = useNavigate(); // Hook for navigation
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent form from refreshing the page
-    setError(''); // Clear previous error messages
+    e.preventDefault();              // Prevent form from refreshing the page
+    setError('');                   // Clear any previous error
 
     try {
-      await login({ username, password }); // Attempt to log in
-      navigate('/'); // Redirect to homepage on success
+      // Attempt to log in via context's login()
+      await login({ username, password });
+      navigate('/');               // Redirect to homepage on success
     } catch (err) {
       console.error('Login error:', err);
 
-      // Handle different errors
+      // Django REST Framework returns { detail: '…' } on bad creds
       if (err.response?.data?.detail) {
         setError(err.response.data.detail);
       } else if (err.response?.status === 401) {
@@ -36,25 +37,33 @@ const Login = () => {
   return (
     <div className="login">
       <h2>Login</h2>
-      
+
       {/* Show error message if there is one */}
       {error && <div className="error-message">{error}</div>}
-      
+
       <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <label>
+          Username
+          <input
+            type="text"
+            placeholder="Enter your username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
+        </label>
+
+        <label>
+          Password
+          <input
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </label>
+
         <button type="submit">Login</button>
       </form>
     </div>
