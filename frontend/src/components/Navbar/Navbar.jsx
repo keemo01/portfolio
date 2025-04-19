@@ -1,133 +1,126 @@
-import './Navbar.css'; // Import styles for the navbar component
+// Navbar.jsx
 
-import logo from '../../assets/logo.png'; // Import logo image
-import arrow from '../../assets/arrow.png'; // Import arrow image
-
-import { CoinContext } from '../../context/CoinContext'; // Import CoinContext
-import { UserContext } from '../../context/UserContext'; // Import UserContext
-import React, { useContext, useState } from 'react'; // Import React and useContext hook
-import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate for navigation
-import axios from 'axios'; // Import axios for API requests
-import { FaUserCircle, FaUser } from 'react-icons/fa'; // Import user icon
+import React, { useContext, forwardRef } from 'react';
+import './Navbar.css';
+import logo from '../../assets/logo.png';
+import arrow from '../../assets/arrow.png';
+import { CoinContext } from '../../context/CoinContext';
+import { UserContext } from '../../context/UserContext';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { FaUser } from 'react-icons/fa';
 import { Dropdown } from 'react-bootstrap';
 
 const Navbar = () => {
-    const { setCurrency } = useContext(CoinContext); // Destructure setCurrency from CoinContext
-    const { user, logout, setUser } = useContext(UserContext); // Destructure user and logout from UserContext
-    const navigate = useNavigate(); // Initialize useNavigate
+  const { setCurrency } = useContext(CoinContext);
+  const { user, logout } = useContext(UserContext);
+  const navigate = useNavigate();
 
-    // Handle currency changes
-    const currencyHandler = (event) => {
-        switch (event.target.value) {
-            case "usd":
-                setCurrency({ name: "usd", symbol: "$" });
-                break;
-            case "eur":
-                setCurrency({ name: "eur", symbol: "€" });
-                break;
-            case "gbp":
-                setCurrency({ name: "gbp", symbol: "£" });
-                break;
-            default:
-                setCurrency({ name: "usd", symbol: "$" });
-                break;
-        }
-    };
+  const symbolMap = { usd: '$', eur: '€', gbp: '£' };
 
-    // Handle logout
-const handleLogout = async () => {
-    // Gets the refresh token from localStorage
-    const refresh_token = localStorage.getItem('refresh_token');
-    try {
-        // Clear the user state
-      logout(); 
-  
-        // Send a POST request to the logout endpoint
-      await axios.post('http://127.0.0.1:8000/api/logout/', 
-        { refresh_token }, 
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-          },
-        }
-      );
-      navigate('/login'); // Redirect to the login page
-    } catch (error) {
-      console.error('Error logging out:', error);
-      // Even if the server request fails still logs out locally
-      logout();
-      navigate('/login');
-    }
+  // Set default currency to USD
+  const currencyHandler = (e) => {
+    const code = e.target.value;
+    setCurrency({ name: code, symbol: symbolMap[code] });
   };
-  
 
-    const CustomToggle = React.forwardRef(({ children, onClick }, ref) => (
-        <div
-            ref={ref}
-            onClick={onClick}
-            className="profile-icon-wrapper"
+  // Handle logout
+  const handleLogout = async () => {
+    const refreshToken = localStorage.getItem('refresh_token');
+    logout();
+    try {
+      await axios.post(
+        '/api/logout/',
+        { refresh_token: refreshToken },
+        { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } }
+      );
+    } catch (err) {
+      console.error('Logout failed', err);
+    }
+    navigate('/login');
+  };
+
+  // Custom toggle for the dropdown menu
+  const ProfileToggle = forwardRef(({ onClick }, ref) => (
+    <button
+      ref={ref}
+      onClick={onClick}
+      className="profile-icon-wrapper"
+      aria-label="Open user menu"
+    >
+      <FaUser className="profile-icon" />
+    </button>
+  ));
+
+  return (
+    <nav className="navbar" role="navigation" aria-label="Main navigation">
+      <Link to="/" className="navbar-logo" aria-label="Home">
+        <img src={logo} alt="App logo" />
+      </Link>
+
+      <ul className="navbar-links">
+        <li><Link to="/">Home</Link></li>
+        <li><Link to="/how-it-works">How It Works</Link></li>
+        {/* only show Features & Contact when NOT logged in */}
+        {!user && <li><Link to="/features">Features</Link></li>}
+        {user && (
+          <>
+            <li><Link to="/analysis">Analysis</Link></li>
+            <li><Link to="/blog">Blog</Link></li>
+          </>
+        )}
+        {!user && <li><Link to="/contact">Contact</Link></li>}
+      </ul>
+
+      <div className="navbar-cta">
+        <label htmlFor="currency-select" className="visually-hidden">
+          Select currency
+        </label>
+        <select
+          id="currency-select"
+          onChange={currencyHandler}
+          defaultValue="usd"
+          aria-label="Currency"
         >
-            <FaUser className="profile-icon" />
-        </div>
-    ));
+          {Object.keys(symbolMap).map((code) => (
+            <option key={code} value={code}>
+              {code.toUpperCase()}
+            </option>
+          ))}
+        </select>
 
-    return (
-        <div className='navigation-bar'>
-            <Link to={'/'}>
-                <img src={logo} alt="Logo" className='logo' />
+        {user ? (
+          <div className="user-menu">
+            <span className="welcome">Hi, {user.username}</span>
+            <Dropdown align="end">
+              <Dropdown.Toggle as={ProfileToggle} id="profile-dropdown" />
+              <Dropdown.Menu>
+                <Dropdown.Item as={Link} to="/profile">
+                  Profile
+                </Dropdown.Item>
+                <Dropdown.Item as={Link} to="/portfolio">
+                  Portfolio
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item onClick={handleLogout}>
+                  Logout
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          </div>
+        ) : (
+          <div className="auth-buttons">
+            <Link to="/login" className="btn-outline">
+              Login <img src={arrow} alt="→" />
             </Link>
-            <ul>
-                <Link to={'/'}><li>Home</li></Link>
-                <li>Features</li>
-                {user && (
-                    <>
-                        <li><Link to="/blog">Blog</Link></li>
-                        <li><Link to="/analysis">Analysis</Link></li>
-                    </>
-                )}
-            </ul>
-
-            <div className='nav-actions'>
-                <select onChange={currencyHandler}>
-                    <option value="usd">USD</option>
-                    <option value="eur">EUR</option>
-                    <option value="gbp">GBP</option>
-                </select>
-                {user ? ( // Show Logout and Profile Icon when logged in
-                    <>
-                        <span className="welcome-user">Welcome, {user.username}</span>
-                        <Dropdown align="end">
-                            <Dropdown.Toggle as={CustomToggle} id="profile-dropdown">
-                                {/* Icon is rendered by CustomToggle */}
-                            </Dropdown.Toggle>
-
-                            <Dropdown.Menu className="dropdown-menu">
-                                <Dropdown.Item as={Link} to="/profile">
-                                    Profile
-                                </Dropdown.Item>
-                                <Dropdown.Item as={Link} to="/portfolio" className="nav-link">
-                                    Portfolio
-                                </Dropdown.Item>
-                                <Dropdown.Divider />
-                                <Dropdown.Item onClick={handleLogout}>
-                                    Logout
-                                </Dropdown.Item>
-                            </Dropdown.Menu>
-                        </Dropdown>
-                    </>
-                ) : ( // Show Login/SignUp when not logged in
-                    <>
-                        <Link to={'/login'}>
-                            <button>Login <img src={arrow} alt="Arrow" /></button>
-                        </Link>
-                        <Link to={'/signup'}>
-                            <button>Sign Up <img src={arrow} alt="Arrow" /></button>
-                        </Link>
-                    </>
-                )}
-            </div>
-        </div>
-    );
+            <Link to="/signup" className="btn-gradient">
+              Sign Up <img src={arrow} alt="→" />
+            </Link>
+          </div>
+        )}
+      </div>
+    </nav>
+  );
 };
 
 export default Navbar;

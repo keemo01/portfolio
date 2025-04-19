@@ -1,99 +1,127 @@
 import React, { useContext, useEffect, useState } from 'react';
-import './Home.css';
-import { CoinContext } from '../../context/CoinContext';
 import { Link } from 'react-router-dom';
+import { CoinContext } from '../../context/CoinContext';
+import './Home.css';
+import heroGraphic from '../../assets/crypto.png';
 
 const Home = () => {
-  // Use the CoinContext to retrieve all coins and currency information.
-  const { allCoin, currency } = useContext(CoinContext);
+  const { allCoin, currency } = useContext(CoinContext); // Context to access all coins and currency
+  const [displayCoin, setDisplayCoin] = useState([]); // State to manage the displayed coins and input value
+  const [input, setInput] = useState(''); // State to manage the input value
 
-  // State variables
-  const [displayCoin, setDisplayCoin] = useState([]); // Holds coins for display (all or filtered)
-  const [input, setInput] = useState(''); // Stores user search input
-
-  // Respond to input from users in the search bar
-  const inputHandler = (event) => {
-    setInput(event.target.value);
-    // If empty input, show all coins
-    if (event.target.value === "") {
-      setDisplayCoin(allCoin);
-    }
-  };
-
-  // Handles the search submission
-  const searchHandler = async (event) => {
-    event.preventDefault();
-    // Filter the coins based on name search (lowercase letter)
-    const coins = await allCoin.filter((item) =>
-      item.name.toLowerCase().includes(input.toLowerCase())
-    );
-    // Update displayed coins with filtered results
-    setDisplayCoin(coins);
-  };
-
-  // Update displayed coins when allCoin data changes (e.g., on initial render)
+  // Initialize display with all coins
   useEffect(() => {
     setDisplayCoin(allCoin);
   }, [allCoin]);
 
+  // Input handler to update the input state
+  const inputHandler = (e) => {
+    const val = e.target.value;
+    setInput(val);
+    if (val === '') {
+      setDisplayCoin(allCoin);
+    }
+  };
+
+  // Search handler to filter coins based on input
+  const searchHandler = (e) => {
+    e.preventDefault();
+    const filtered = allCoin.filter((coin) =>
+      coin.name.toLowerCase().includes(input.toLowerCase())
+    );
+    setDisplayCoin(filtered); // Update the displayed coins based on the input
+  };
+
   return (
     <div className="home">
+
+      {/* Hero Section */}
       <div className="hero">
-        <h1>Newest<br /> Crypto Website</h1>
-        <p>
-          Offering latest news, Access to bots, up-to-date prices, 
-          and information on Crypto Projects
-        </p>
-        <form onSubmit={searchHandler}>
+        <div className="hero-content">
+          <h1>
+          Track Your Crypto holdings<br/>
+          Build & Share Your Insights
+          </h1>
+          <p>
+          Monitor your holdings in real time, collaborate with friends, 
+          and discover top traders insights
+          </p>
+          <div className="hero-buttons">
+            <Link to="/signup" className="btn-gradient">
+              Get Started
+            </Link>
+          </div>
+        </div>
+        <div className="hero-visual">
+          <img src={heroGraphic} alt="3D Crypto Illustration" />
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="search-section">
+        <h2>Find Your Coin</h2>
+        <form onSubmit={searchHandler} className="search-form">
           <input
-            onChange={inputHandler}
             list="coinlist"
             value={input}
+            onChange={inputHandler}
             type="text"
-            placeholder="Search for Crypto.."
+            placeholder="Search for Crypto…"
             required
           />
           <datalist id="coinlist">
-            {/* List of coin names for suggestions */}
-            {allCoin.map((item, index) => (
-              <option key={index} value={item.name} />
+            {allCoin.map((c) => (
+              <option key={c.id} value={c.name} />
             ))}
           </datalist>
-          <button type="submit">Search</button>
+          <button type="submit" className="btn-search">
+            Search
+          </button>
         </form>
       </div>
+
+      {/* Coin Table */}
       <div className="crypto-table">
-        {/* Table Headers */}
         <div className="table-layout header-row">
           <p>#</p>
-          <p>Coins</p>
+          <p>Coin</p>
           <p>Price</p>
-          <p style={{ textAlign: "center" }}>24H Change</p>
+          <p style={{ textAlign: 'center' }}>24H Change</p>
           <p className="market-cap">Market Cap</p>
         </div>
 
-        {/* Render only the first 10 coins */}
-        {displayCoin.slice(0, 10).map((coin, index) => (
-          <Link to={`/coin/${coin.id}`} className="table-layout" key={index}>
-            <p>{coin.market_cap_rank}</p> {/* Rank */}
-            <div>
+        {displayCoin.slice(0, 10).map((coin, idx) => (
+          <Link
+            to={`/coin/${coin.id}`}
+            className="table-layout coin-row"
+            key={coin.id}
+          >
+            <p>{coin.market_cap_rank}</p>
+            <div className="coin-info">
               <img src={coin.image} alt={`${coin.name} logo`} />
-              <p>{coin.name + " - " + coin.symbol}</p> {/* Name, Symbol, and Logo */}
+              <p>
+                {coin.name} <span className="symbol">({coin.symbol.toUpperCase()})</span>
+              </p>
             </div>
             <p>
-              {currency.symbol} {coin.current_price.toLocaleString()} {/* Dynamic Currency Symbol */}
-            </p> {/* Price */}
+              {currency.symbol}{' '}
+              {coin.current_price.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </p>
             <p
               style={{
-                textAlign: "center",
-                color: coin.price_change_percentage_24h < 0 ? "red" : "green",
+                textAlign: 'center',
+                color: coin.price_change_percentage_24h < 0 ? 'red' : 'green',
               }}
             >
               {coin.price_change_percentage_24h?.toFixed(2)}%
-            </p> {/* 24H Change */}
+            </p>
             <p className="market-cap">
-              {currency.symbol} {coin.market_cap.toLocaleString()} {/* Dynamic Currency Symbol */}
-            </p> {/* Market Cap */}
+              {currency.symbol}{' '}
+              {coin.market_cap.toLocaleString()}
+            </p>
           </Link>
         ))}
       </div>
