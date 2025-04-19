@@ -139,12 +139,16 @@ def delete_comment(request, comment_id):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+# -----------------------------------
+# BOOKMARKS
+# -----------------------------------
+
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def user_bookmarks(request):
-    bookmarks = Bookmark.objects.filter(user=request.user)
-    serializer = BookmarkSerializer(bookmarks, many=True, context={'request': request})
+    bms = Bookmark.objects.filter(user=request.user)
+    serializer = BookmarkSerializer(bms, many=True, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -152,70 +156,47 @@ def user_bookmarks(request):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def add_bookmark(request, blog_id):
-    try:
-        blog = Blog.objects.get(id=blog_id)
-    except Blog.DoesNotExist:
-        return Response({'detail': 'Blog not found'}, status=status.HTTP_404_NOT_FOUND)
-    
-    bookmark, created = Bookmark.objects.get_or_create(user=request.user, blog=blog)
+    blog = get_object_or_404(Blog, id=blog_id)
+    bm, created = Bookmark.objects.get_or_create(user=request.user, blog=blog)
     if created:
-        serializer = BookmarkSerializer(bookmark, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response({'detail': 'Blog is already bookmarked'}, status=status.HTTP_200_OK)
+        return Response(BookmarkSerializer(bm, context={'request': request}).data,
+                        status=status.HTTP_201_CREATED)
+    return Response({'detail': 'Already bookmarked'}, status=status.HTTP_200_OK)
 
 
 @api_view(['DELETE'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def remove_bookmark(request, blog_id):
-    """
-    Remove a blog bookmark.
-    """
-    try:
-        bookmark = Bookmark.objects.get(user=request.user, blog__id=blog_id)
-        bookmark.delete()
-        return Response({'detail': 'Bookmark removed'}, status=status.HTTP_200_OK)
-    except Bookmark.DoesNotExist:
-        return Response({'detail': 'Bookmark does not exist'}, status=status.HTTP_404_NOT_FOUND)
-    
+    bm = get_object_or_404(Bookmark, user=request.user, blog__id=blog_id)
+    bm.delete()
+    return Response({'detail': 'Bookmark removed'}, status=status.HTTP_200_OK)
+
+# -----------------------------------
+# LIKES
+# -----------------------------------
+
 @api_view(['POST'])
+@authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def like_post(request, blog_id):
-
-
-    try:
-        blog = Blog.objects.get(pk=blog_id)
-    except Blog.DoesNotExist:
-        return JsonResponse({'detail': 'Blog not found.'}, status=404)
-
-    user = request.user
-    like, created = Like.objects.get_or_create(user=user, blog=blog)
-
+    blog = get_object_or_404(Blog, id=blog_id)
+    like, created = Like.objects.get_or_create(user=request.user, blog=blog)
     if not created:
         # If like already exists, delete it (toggle off)
         like.delete()
-        return JsonResponse({'detail': 'Unliked successfully.'}, status=200)
-    else:
-        # New like created
-        return JsonResponse({'detail': 'Liked successfully.'}, status=201)
+        return JsonResponse({'detail': 'Unliked'}, status=200)
+    return JsonResponse({'detail': 'Liked'}, status=201)
+
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication, SessionAuthentication])
-@permission_classes([AllowAny])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def like_count(request, blog_id):
     """
     Returns total like_count, and `liked: true|false` if the request is authenticated.
     """
-    try:
-        blog = Blog.objects.get(pk=blog_id)
-    except Blog.DoesNotExist:
-        return JsonResponse({'detail': 'Blog not found.'}, status=404)
-
-    count = blog.likes.count()
-    liked = False
-    # If the user sent valid JWT/session cookie, check if they've liked this blog
-    user = request.user
-    if user and user.is_authenticated:
-        liked = blog.likes.filter(user=user).exists()
-
-    return JsonResponse({'like_count': count, 'liked': liked}, status=200)
+    blog = get_object_or_404(Blog, id=blog_id)
+    total = blog.likes.count()
+    liked = blog.likes.filter(user=request.user).exists()
+    return JsonResponse({'like_count': total, 'liked': liked}, status=200)

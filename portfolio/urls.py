@@ -6,18 +6,22 @@ from django.conf.urls.static import static
 from django.views.static import serve
 
 from tracker.views import user_views as views
+from tracker.views.user_views import CustomTokenObtainPairView
 
 def home(request):
     return HttpResponse("Welcome to the Crypto Portfolio Tracker API! Visit /api/coins/ for coin data.")
 
 urlpatterns = [
-    path('', home, name='home'),  # home URL
-    path('admin/', admin.site.urls),  # Admin interface
-    path('api/', include('tracker.urls')),  # Include routes from the tracker app
-    re_path('login', views.login),
-    re_path('signup', views.signup),
-    re_path('test_token', views.test_token),
-    # Add explicit media serving URL pattern
+    path('', home, name='home'),                    
+    path('admin/', admin.site.urls),                
+    path('api/', include('tracker.urls')),           
+
+    # Authentication at root
+    re_path(r'^login/?$', CustomTokenObtainPairView.as_view(), name='login'),# Login
+    re_path(r'^signup/?$', views.signup, name='signup'),# User registration
+    re_path(r'^test_token/?$', views.test_token, name='test_token'),# Test token
+
+    # Static and media files
     re_path(r'^media/(?P<path>.*)$', serve, {
         'document_root': settings.MEDIA_ROOT,
     }),
