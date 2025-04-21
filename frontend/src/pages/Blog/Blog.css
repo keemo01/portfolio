@@ -1,972 +1,513 @@
-/* General container for the blog */
-.blog-container {
-    max-width: 1200px; /* Increased from 700px to allow more space */
-    margin: 0 auto;
-    padding: 3rem 2rem 100px; /* Increased padding for spacing */
-    min-height: 100vh;
-    background-color: #f5f8fa; /* Light background color */
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    display: flex;
-    flex-direction: row;
-    gap: 2rem; /* Add gap between main content and news */
-}
-
-/* Floating action button */
-.fab {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background-color: #1da1f2; /* Twitter's blue */
-    color: white;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.fab:hover {
-    background-color: #1a91da;
-    transform: scale(1.1);
-}
-
-.fab-close {
-    background-color: #e0245e; /* Red for closing */
-}
-
-.fab-close:hover {
-    background-color: #d82c56;
-}
-
-/* Modal Overlay */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-/* Create Blog Form */
-.create-blog-form {
-    background: white;
-    width: 100%;
-    max-width: 600px;
-    border-radius: 16px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-    overflow: hidden;
-}
-
-.form-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    align-items: center;
-    position: relative;
-}
-
-.form-header h3 {
+/* ==========================================================================
+   CSS Variables & Themes
+   Defines color palette, border radii, shadows, and transitions. Includes dark mode overrides.
+   ========================================================================== */
+   :root {
+    --color-bg: #e6ecf0;
+    --color-card: #ffffff;
+    --color-border: #e1e8ed;
+    --color-border-hover: #ccd6dd;
+    --color-text: #14171a;
+    --color-muted: #657786;
+    --color-primary: #1da1f2;
+    --color-primary-hover: #0d8ddf;
+    --color-danger: #e0245e;
+    --radius-card: 16px;
+    --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --transition-fast: 0.2s ease-in-out;
+    --transition-slow: 0.4s ease;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #15202b;
+      --color-card: #192734;
+      --color-border: #22303c;
+      --color-border-hover: #33444d;
+      --color-text: #e1e8ed;
+      --color-muted: #8899a6;
+      --color-primary: #1da1f2;
+    }
+  }
+  
+  /* ==========================================================================
+     Global Styles
+     Base styles for body, links, images, and videos.
+     ========================================================================== */
+  body {
     margin: 0;
-    flex-grow: 1;
-    text-align: center;
-    font-size: 1.2rem;
-}
-
-.close-button {
-    position: absolute;
-    left: 16px;
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #666;
-}
-
-.form-content {
-    padding: 16px;
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-    margin-bottom: 16px;
-}
-
-.avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #1da1f2;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    margin-right: 12px;
-}
-
-.username {
-    font-weight: 600;
-    color: #333;
-}
-
-.title-input,
-.content-input {
-    width: 100%;
-    border: none;
-    outline: none;
-    font-size: 1.1rem;
-    margin-bottom: 12px;
-    padding: 8px 0;
-}
-
-.title-input {
-    font-weight: 600;
-}
-
-.content-input {
-    min-height: 150px;
-    resize: vertical;
-}
-
-.media-upload {
-    margin-top: 16px;
-    display: flex;
-    align-items: center;
-}
-
-.media-label {
-    cursor: pointer;
-    color: #1da1f2;
-    padding: 8px;
-    border-radius: 50%;
-    transition: background-color 0.2s;
-}
-
-.media-label:hover {
-    background-color: rgba(29, 161, 242, 0.1);
-}
-
-.media-input {
-    display: none;
-}
-
-.media-count {
-    margin-left: 12px;
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.form-footer {
-    padding: 12px 16px;
-    border-top: 1px solid #eee;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.publish-button {
-    background-color: #1da1f2;
-    color: white;
-    border: none;
-    padding: 8px 24px;
-    border-radius: 9999px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.publish-button:disabled {
-    background-color: #9fd0f5;
-    cursor: not-allowed;
-}
-
-.publish-button:not(:disabled):hover {
-    background-color: #1a91da;
-}
-
-/* Form for creating a blog post */
-.create-blog-form {
-    background: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    margin-bottom: 3rem;
-    border: 1px solid #ddd;
-}
-
-.create-blog-form h3 {
-    margin-top: 0;
-    color: #333;
-    font-size: 1.5rem;
-    font-weight: bold;
-}
-
-.create-blog-form input,
-.create-blog-form textarea {
-    width: 100%;
-    padding: 0.9rem;
-    margin-bottom: 1.2rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1.1rem;
-}
-
-.create-blog-form textarea {
-    height: 150px;
-    resize: vertical;
-}
-
-.form-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-}
-
-/* Blog posts styling */
-.blog-posts {
-    display: flex;
-    flex-direction: column;
-    gap: 1.8rem;
-    flex: 2;
-    margin-right: 20px; /* adjust spacing as needed */
-}
-
-.blog-post {
-    background: white;
-    padding: 1.8rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    transition: transform 0.2s ease, box-shadow 0.3s ease;
-}
-
-.blog-post:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.post-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.post-header h3 {
-    margin: 0;
-    color: #1a1a1a;
-    font-size: 1.4rem;
-}
-
-.delete-btn {
-    background: none;
-    border: none;
-    color: #e0245e;
-    cursor: pointer;
-    padding: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.delete-btn:hover {
-    text-decoration: underline;
-}
-
-.post-footer {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.9rem;
-    color: #888;
-}
-
-.author {
-    font-weight: 500;
-    color: #1da1f2; /* Twitter's blue for author */
-}
-
-.empty-state {
-    text-align: center;
-    padding: 3rem;
-    color: #666;
-}
-
-/* Links styling */
-.post-title-link, 
-.post-content-link {
-    text-decoration: none;
-    color: inherit;
-}
-
-.post-title-link:hover h3 {
-    color: #1da1f2;
-}
-
-.post-content-link:hover p {
-    color: #444;
-}
-
-/* Media styling for images and videos */
-.post-media {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin: 1.5rem 0;
-    background: none;
-}
-
-.media-item {
-    width: 100%;
-    margin: 0 auto;
-    background: none;
-    box-shadow: none;
-}
-
-.media-content {
-    width: 100%;
-    height: auto;
-    object-fit: contain;
-    border-radius: 8px;
-    display: block;
-    background: none;
-}
-
-.detailed-post .media-content {
-    max-height: 600px;
-    width: auto;
-    margin: 0 auto;
-}
-
-/* Comments Section Styles */
-.comments-section {
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid #ddd;
-}
-
-.comments-section h3 {
-    margin-bottom: 1rem;
-    font-size: 1.3rem;
-    color: #1a1a1a;
-}
-
-.comment-form {
-    margin-bottom: 2rem;
-}
-
-.comment-form textarea {
-    width: 100%;
-    min-height: 100px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    resize: vertical;
-    font-family: inherit;
-}
-
-.comment-form button {
-    background-color: #1da1f2;
-    color: white;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.9rem;
-}
-
-.comment-form button:hover {
-    background-color: #1a91da;
-}
-
-.comments-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.comment {
-    padding: 1rem;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.comment.reply {
-    margin-left: 2rem;
-    margin-top: 1rem;
-    border-left: 2px solid #1da1f2;
-}
-
-.comment-header {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 0.5rem;
-}
-
-.comment-author {
-    font-weight: 500;
-    color: #1da1f2;
-}
-
-.comment-date {
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.comment-content {
-    margin: 0.5rem 0;
-    color: #333;
-}
-
-.comment-actions {
-    display: flex;
-    gap: 1rem;
-    margin-top: 0.5rem;
-}
-
-.reply-button, .delete-button {
-    background: none;
-    border: none;
-    color: #666;
-    font-size: 0.9rem;
-    cursor: pointer;
     padding: 0;
-}
-
-.reply-button:hover {
-    color: #1da1f2;
-}
-
-.delete-button:hover {
-    color: #e0245e;
-}
-
-.reply-form {
-    margin-top: 1rem;
-    margin-bottom: 1rem;
-}
-
-.form-buttons {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+  }
+  a:hover {
+    color: var(--color-primary-hover);
+  }
+  
+  img,
+  video {
+    max-width: 100%;
+    border-radius: var(--radius-card);
+  }
+  
+  /* ==========================================================================
+     Blog & News Layout
+     Sets up main flex container for blog and news sidebar.
+     ========================================================================== */
+  .blog-container {
     display: flex;
-    gap: 1rem;
-}
-
-.form-buttons button {
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    cursor: pointer;
+    max-width: 1200px;
+    margin: 2rem auto;
+    gap: 2rem;
+    padding: 0 1rem;
+  }
+  .main-content {
+    flex: 2;
+  }
+  .news-container {
+    flex: 1;
+    position: sticky;
+    top: 1rem;
+  }
+  
+  /* ==========================================================================
+     Sidebar Styles
+     Styles and animation for the primary page heading
+     ========================================================================== */
+  .main-content h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    animation: fadeIn 0.6s ease;
+  }
+  
+  /* ==========================================================================
+     Card Styles
+     Card appearance for posts, tweets, news items, and comments
+     ========================================================================== */
+  .blog-post,
+  .tweet,
+  .news-item,
+  .comment {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-light);
+    transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+    animation: fadeInUp 0.5s ease;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .blog-post:hover,
+  .tweet:hover,
+  .news-item:hover,
+  .comment:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
+  }
+  
+  /* ==========================================================================
+     Animations
+     Keyframes for fade-in and fade-up effects
+     ========================================================================== */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  /* ==========================================================================
+     Header Styles
+     Author/avatar/date styling for posts and tweets
+     ========================================================================== */
+  .post-header,
+  .tweet-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .post-header h3,
+  .tweet-header .name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
+  }
+  .post-header .author-link,
+  .tweet-header .name {
+    color: var(--color-text);
+  }
+  .post-header .date-created,
+  .tweet-header .date {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+  }
+  
+  .avatar,
+  .tweet-avatar {
+    width: 48px;
+    height: 48px;
+    background: var(--color-muted);
+    color: var(--color-card);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+  
+  /* ==========================================================================
+     Post Content
+     Styles for the main content of posts and tweets
+     ========================================================================== */
+  .post-content-link p,
+  .tweet-content {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0.75rem 0;
+    white-space: pre-wrap;
+  }
+  
+  /* ==========================================================================
+     Media Previews
+     Styles for media previews in posts and tweets
+     ========================================================================== */
+  .post-media-preview,
+  .blog-media-container {
+    margin: 0.75rem 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.5rem;
+  }
+  .media-preview,
+  .blog-media-content {
+    object-fit: cover;
+  }
+  .media-upgrade::after {
+    content: attr(data-count);
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+  }
+  
+  /* ==========================================================================
+     Action Bar
+     Styles for action buttons (like, retweet, comment) in posts and tweets
+     ========================================================================== */
+  .post-footer,
+  .tweet-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     font-size: 0.9rem;
-}
-
-.form-buttons button[type="button"] {
-    background-color: #e0e0e0;
+    color: var(--color-muted);
+  }
+  .post-footer button,
+  .tweet-actions .action {
+    background: none;
     border: none;
-    color: #333;
-}
-
-.form-buttons button[type="submit"] {
-    background-color: #1da1f2;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: color var(--transition-fast);
+  }
+  .post-footer button:hover,
+  .tweet-actions .action:hover {
+    color: var(--color-primary);
+  }
+  .post-footer .liked,
+  .tweet-actions .action.liked {
+    color: var(--color-danger) !important;
+  }
+  
+  /* ==========================================================================
+     Buttons
+     Button styles for bookmarking, publishing, commenting
+     ========================================================================== */
+  .bookmark-btn,
+  .publish-button,
+  .comment-form button {
+    background: var(--color-primary);
     border: none;
-    color: white;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-    .blog-container {
-        padding: 2rem;
-    }
-    .fab {
-        width: 50px;
-        height: 50px;
-    }
-    .create-blog-form {
-        padding: 1.5rem;
-    }
-}
-
-/* Responsive design for comments */
-@media (max-width: 768px) {
-    .comment.reply {
-        margin-left: 1rem;
-    }
-}
-
-/* Search input styling */
-.search-input {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 16px;
-    box-sizing: border-box;
-}
-
-.search-input:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
-}
-
-.author-link {
-    color: #007bff;
-    text-decoration: none;
-}
-
-.author-link:hover {
-    text-decoration: underline;
-}
-
-/* Search results styling */
-.search-results {
-    margin-top: 20px;
-    border-radius: 8px;
-    background: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.search-section {
-    padding: 15px;
-    border-bottom: 1px solid #eee;
-}
-
-.search-section h3 {
-    margin-bottom: 10px;
-    color: #333;
-}
-
-.user-result {
-    text-decoration: none;
-    color: inherit;
-}
-
-.user-item {
-    padding: 10px;
-    margin: 5px 0;
-    border-radius: 4px;
-    background: #f8f9fa;
-    transition: background 0.2s;
-}
-
-.user-item:hover {
-    background: #e9ecef;
-}
-
-.username {
-    font-weight: bold;
-    margin-right: 10px;
-}
-
-.email {
-    color: #666;
-    font-size: 0.9em;
-}
-
-.no-results {
-    padding: 20px;
-    text-align: center;
-    color: #666;
-}
-
-.search-posts {
-    margin-top: 0;
-}
-
-.search-results {
-    margin-bottom: 2rem;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    overflow: hidden;
-}
-
-.search-section:not(:last-child) {
-    border-bottom: 1px solid #eee;
-}
-
-.search-container {
+    color: var(--color-card);
+    padding: 0.5rem 1.2rem;
+    border-radius: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background var(--transition-fast), transform var(--transition-fast);
+  }
+  .bookmark-btn:hover,
+  .publish-button:hover,
+  .comment-form button:hover {
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+  }
+  .bookmark-btn:disabled,
+  .publish-button:disabled {
+    background: var(--color-border);
+    cursor: not-allowed;
+  }
+  
+  /* ==========================================================================
+     Search & Suggestions
+     Styles for search inputs and suggestion dropdowns
+     ========================================================================== */
+  .search-container {
     position: relative;
-    margin-bottom: 20px;
-}
-
-.search-suggestions {
+    margin-bottom: 1.5rem;
+  }
+  .search-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 9999px;
+    font-size: 1rem;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(29,161,242,0.2);
+  }
+  .search-suggestions {
     position: absolute;
     top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    z-index: 1000;
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.suggestion-section {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-}
-
-.suggestion-section h4 {
-    margin: 0 0 8px;
-    color: #666;
-    font-size: 0.9em;
-}
-
-.suggestion-item {
-    display: block;
-    padding: 8px 12px;
-    color: inherit;
-    text-decoration: none;
-    border-radius: 4px;
-}
-
-.suggestion-item:hover {
-    background: #f5f8fa;
-}
-
-mark {
-    background-color: #ffd70050;
-    padding: 0 2px;
-    border-radius: 2px;
-}
-
-/* Style for highlighted text in search results */
-.search-results mark {
-    background-color: #ffd70050;
-    color: inherit;
-}
-
-/* Right column: news container */
-.news-container {
-    flex: 1;
-    min-width: 300px;
-    max-width: 400px;
-    position: sticky;
-    top: 10px;
-    height: calc(100vh - 100px); /* Set fixed height for scrolling */
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1.5rem;
-    overflow-y: auto; /* Enable vertical scrolling */
-    
-    /* Custom scrollbar styling */
-    scrollbar-width: thin;
-    scrollbar-color: #0001024d #f5f8fa;
-}
-
-/* Webkit scrollbar styling */
-.news-container::-webkit-scrollbar {
-    width: 8px;
-}
-
-.news-container::-webkit-scrollbar-track {
-    background: #f5f8fa;
-    border-radius: 4px;
-}
-
-.news-container::-webkit-scrollbar-thumb {
-    background-color: #000000;
-    border-radius: 4px;
-    border: 2px solid #f5f8fa;
-}
-
-.news-container::-webkit-scrollbar-thumb:hover {
-    background-color: #1991db;
-}
-
-.news-item {
-    background: white;
-    padding: 1rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease;
-}
-
-.news-item:hover {
-    transform: translateY(-2px);
-}
-
-.news-item a {
-    text-decoration: none;
-    color: inherit;
-}
-
-.news-item h4 {
-    margin: 0 0 0.5rem 0;
-    color: #1a1a1a;
-    font-size: 1rem;
-}
-
-.news-item p {
-    margin: 0;
-    color: #666;
-    font-size: 0.9rem;
-}
-
-/* Update main content width */
-.main-content {
-    flex: 2;
-    max-width: 700px;
-}
-
-.post-media {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin: 1rem 0;
-}
-
-.media-item {
     width: 100%;
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-.media-content {
-    width: 100%;
-    height: auto;
-    object-fit: cover;
-    border-radius: 8px;
-}
-
-.detailed-post .post-content {
-    margin: 2rem 0;
-    line-height: 1.6;
-}
-
-.post-media-preview {
-    position: relative;
-    margin: 1rem 0;
+    background: var(--color-card);
+    border: 1px solid var(--color-border-hover);
+    border-radius: var(--radius-card);
+    margin-top: 0.25rem;
     max-height: 300px;
-    overflow: hidden;
-    border-radius: 8px;
-}
-
-.media-preview {
-    width: 100%;
-    height: 300px;
-    object-fit: cover;
-    border-radius: 8px;
-    display: block;
-}
-
-.media-count {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.8rem;
-}
-
-.blog-media-container {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1rem;
-    margin: 2rem 0;
-}
-
-.blog-media-item {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: none;
-    box-shadow: none;
-}
-
-.blog-media-content {
-    max-width: 100%;
-    height: auto;
-    max-height: 800px;
-    object-fit: contain;
-    border-radius: 8px;
-    display: block;
-}
-
-/* Add responsive design for larger screens */
-@media (min-width: 768px) {
-    .blog-media-container {
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    }
-}
-
-.error-message {
-    text-align: center;
-    padding: 2rem;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    margin: 2rem 0;
-}
-
-.error-message h2 {
-    color: #e0245e;
-    margin-bottom: 1rem;
-}
-
-.error-message p {
-    color: #666;
-    font-size: 1.1rem;
-}
-
-.media-upload-section {
-    margin: 1rem 0;
-}
-
-.media-upload {
+    overflow-y: auto;
+    z-index: 20;
+  }
+  .suggestion-item {
+    padding: 0.75rem 1rem;
     display: flex;
     align-items: center;
-    margin-bottom: 1rem;
-}
-
-.media-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    color: #1da1f2;
-    padding: 8px 16px;
-    border-radius: 20px;
-    transition: background-color 0.2s;
-    font-size: 0.95rem;
-}
-
-.media-label:hover {
-    background-color: rgba(29, 161, 242, 0.1);
-}
-
-.media-label i {
-    font-size: 1.2rem;
-}
-
-.media-preview-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px;
-    margin-top: 1rem;
-    border-radius: 16px;
-    overflow: hidden;
-    border: 1px solid #eee;
-    padding: 12px;
-}
-
-.preview-item {
-    position: relative;
-    aspect-ratio: 1;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.preview-content {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.remove-media {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    background: rgba(0, 0, 0, 0.5);
-    color: #fff;
-    border: none;
-    width: 20px;
-    height: 20px;
+    gap: 0.75rem;
+    transition: background var(--transition-fast);
+  }
+  .suggestion-item:hover {
+    background: var(--color-bg);
+  }
+  
+  /* ==========================================================================
+     Floating Action Button & Modal
+     Styles for the floating action button and modal for creating new posts
+     ========================================================================== */
+  .fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
     border-radius: 50%;
+    border: none;
+    color: var(--color-card);
+    font-size: 36px;
     cursor: pointer;
+    box-shadow: var(--shadow-hover);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .fab:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  }
+  .fab.fab-close {
+    background: var(--color-danger);
+  }
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
-    padding: 0;
-    opacity: 0;
-    transition: opacity 0.2s ease, background-color 0.2s ease;
-    z-index: 2;
-}
-
-.preview-item:hover .remove-media {
-    opacity: 1;
-}
-
-.remove-media:hover {
-    background: rgba(0, 0, 0, 0.8);
-}
-
-.bookmark-btn {
-    background-color: #007bff; /* Primary blue */
-    color: #fff;
-    border: none;
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s ease-in-out;
+    z-index: 25;
   }
-  
-  .bookmark-btn:hover {
-    background-color: #0056b3; /* Darker blue for hover state */
+  .create-blog-form {
+    background: var(--color-card);
+    width: 100%;
+    max-width: 540px;
+    border-radius: var(--radius-card);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-hover);
   }
-  
-  .bookmark-btn:active {
-    background-color: #004085; /* Even darker blue for active state */
-  }
-  
-/* Container for the like button and count */
-.like-container {
+  .form-header {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-/* Rectangular like button styling */
-.like-btn {
-    background: #f2f2f2;
-    border: 2px solid transparent;
-    border-radius: 4px; /* Subtle rounding for a rectangular shape */
-    padding: 8px 12px;
+    margin-bottom: 1rem;
+  }
+  .close-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
     cursor: pointer;
+  }
+  .title-input,
+  .content-input {
+    width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 0.75rem;
     font-size: 1rem;
-    color: #262626;
-    transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
-}
-
-/* Liked state: a subtle blue highlight */
-.like-btn.liked {
-    background-color: #d0eaff; /* Soft blue background */
-    border-color: #007bff;      /* Blue border when liked */
-    color: #007bff;             /* Accent text color */
-}
-
-/* Hover effect for better interactivity */
-.like-btn:hover {
-    transform: scale(1.05);
-    background-color: #eaeaea;
-}
-
-/* Active state: slightly scale down */
-.like-btn:active {
-    transform: scale(0.98);
-}
-
-/* Styling for the like count */
-.like-count {
+    margin-bottom: 1rem;
+  }
+  .content-input {
+    resize: vertical;
+    min-height: 140px;
+  }
+  .media-upload-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  /* ==============================================================================================
+     Comments Section & Delete Button
+     Styles for comment list, delete button, individual comment cards
+     ========================================================================== */
+  .comments-list {
+    margin-top: 1rem;
+  }
+  .comment {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .comment:hover {
+    background: var(--color-bg);
+    box-shadow: var(--shadow-light);
+  }
+  .comment.reply {
+    margin-left: 2.5rem;
+    border-color: var(--color-border-hover);
+  }
+  .comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    margin-bottom: 0.5rem;
+  }
+  .comment-author {
+    font-weight: 700;
+    color: var(--color-text);
+  }
+  .comment-date {
+    font-style: italic;
+    opacity: 0.8;
+  }
+  .comment-content {
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+    white-space: pre-wrap;
+  }
+  .comment-actions {
+    display: flex;
+    gap: 1rem;
+  }
+  .comment-actions .reply-button,
+  .comment-actions .delete-button {
+    background: none;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+  }
+  .comment-actions .delete-button {
+    color: var(--color-danger);
+  }
+  .comment-actions button:hover {
+    opacity: 0.75;
+  }
+  .reply-form {
+    margin-top: 0.5rem;
+    padding-left: 1rem;
+  }
+  .reply-form textarea {
+    width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 0.5rem;
+    font-size: 0.95rem;
+    resize: vertical;
+    margin-bottom: 0.5rem;
+  }
+  .reply-form .form-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .reply-form button {
+    background: var(--color-primary);
+    color: var(--color-card);
+    border: none;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+  }
+  .reply-form button:hover {
+    background: var(--color-primary-hover);
+  }
+  
+  .delete-btn {
+    background: none;
+    border: none;
+    color: var(--color-danger);
     font-size: 0.9rem;
-    color: #8e8e8e;
-    font-weight: 500;
-    transition: color 0.2s ease;
-}
+    font-weight: 700;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: color var(--transition-fast), background var(--transition-fast);
+  }
+  
+  .delete-btn:hover {
+    background: rgba(224, 36, 94, 0.1);
+    color: var(--color-danger-hover, #c21f4a);
+  }

@@ -7,6 +7,7 @@ import './Blog.css';
 const BASE_URL = 'http://127.0.0.1:8000/api';
 const NEWS_API_KEY = '7e07333e33234db8ac28e319fd52cdd4';
 
+// Function to format date and time
 const formatDateTime = (dateString) => {
   const date = new Date(dateString);
   const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -14,6 +15,7 @@ const formatDateTime = (dateString) => {
   return `${date.toLocaleDateString('en-US', dateOptions)} - ${date.toLocaleTimeString('en-US', timeOptions).replace(' ', '')}`;
 };
 
+// Function to highlight search query in text
 const highlightText = (text, query) => {
   if (!query) return text;
   const parts = text.split(new RegExp(`(${query})`, 'gi'));
@@ -24,6 +26,7 @@ const highlightText = (text, query) => {
   );
 };
 
+// Main Blog component
 const Blog = () => {
   const [state, setState] = useState({
     blogs: [],
@@ -41,18 +44,18 @@ const Blog = () => {
     isLoading: true
   });
 
-  // likeData holds an object with blogId keys mapped to { likeCount, liked }
+  // State to manage likes
+  // This will hold the like count and liked status for each blog post
   const [likeData, setLikeData] = useState({});
-
   const { user } = useContext(UserContext);
 
-  // Fetch blogs along with their like counts
+  // Fetch blog posts from the API
+  // This function fetches all blog posts and their like counts
   const fetchBlogs = async () => {
     try {
       const response = await axios.get(`${BASE_URL}/blogs/`);
       const blogs = response.data;
       setState(prev => ({ ...prev, blogs }));
-      // For each blog, fetch like count
       const updatedLikeData = {};
       await Promise.all(
         blogs.map(async (blog) => {
@@ -83,6 +86,7 @@ const Blog = () => {
     }
   };
 
+  // Fetch news articles from NewsAPI
   const fetchNews = async () => {
     try {
       const response = await axios.get('https://newsapi.org/v2/everything', {
@@ -103,6 +107,7 @@ const Blog = () => {
     }
   };
 
+  // Fetch blogs and news on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -116,22 +121,21 @@ const Blog = () => {
         setState(prev => ({ ...prev, isLoading: false }));
       }
     };
-    fetchData();
+    fetchData(); // Fetch blogs and news
     return () => {
       state.mediaPreview.forEach(preview => URL.revokeObjectURL(preview.url));
     };
   }, []);
 
-  // When the user logs in/out restart your like state
   useEffect(() => {
     if (user) {
-      fetchBlogs();            // fetch blogs again to get updated like counts
+      fetchBlogs();
     } else {
-      setLikeData({});         //  reset like data
+      setLikeData({});
     }
   }, [user]);
 
-  // Search handler with a slight delay
+  // Handle search input and fetch results
   const handleSearch = async (query) => {
     setState(prev => ({
       ...prev,
@@ -167,7 +171,7 @@ const Blog = () => {
     }
   };
 
-  // Bookmark handler
+  // Handle bookmarking a blog post
   const handleBookmark = async (blogId) => {
     try {
       const res = await axios.post(
@@ -175,28 +179,24 @@ const Blog = () => {
         {},
         {
           headers: {
-            'Authorization': `Bearer ${user.token}`,
+            Authorization: `Bearer ${user.token}`,
           }
         }
       );
-      alert(res.data.detail); // Display success message
+      alert(res.data.detail);
     } catch (error) {
       console.error("Error bookmarking blog:", error);
-      if (error.response) {
-        console.error("Server response:", error.response.data);
-      }
       alert("Error bookmarking blog. Please try again.");
     }
   };
 
-  // Delete blog handler (only available to the blog author)
+  // Handle deleting a blog post
   const handleDeleteBlog = async (blogId) => {
-    const confirmDelete = window.confirm('Are you sure you want to delete this blog post?');
-    if (!confirmDelete) return;
+    if (!window.confirm('Are you sure you want to delete this blog post?')) return;
     try {
       await axios.delete(`${BASE_URL}/blogs/delete/${blogId}/`, {
         headers: {
-          'Authorization': `Bearer ${user.token}`,
+          Authorization: `Bearer ${user.token}`,
           'Content-Type': 'application/json'
         },
       });
@@ -206,21 +206,14 @@ const Blog = () => {
       }));
     } catch (error) {
       console.error('Error deleting blog:', error);
-      if (error.response && error.response.status === 403) {
-        setState(prev => ({
-          ...prev,
-          error: 'You can only delete your own blog posts.'
-        }));
-      } else {
-        setState(prev => ({
-          ...prev,
-          error: 'Unable to delete blog. Try again.'
-        }));
-      }
+      setState(prev => ({
+        ...prev,
+        error: 'Unable to delete blog. Try again.'
+      }));
     }
   };
 
-  // Create blog handler
+  // Handle creating a new blog post
   const handleCreateBlog = async (e) => {
     e.preventDefault();
     const formData = new FormData();
@@ -233,7 +226,7 @@ const Blog = () => {
     try {
       await axios.post(`${BASE_URL}/blogs/create/`, formData, {
         headers: {
-          'Authorization': `Bearer ${user.token}`,
+          Authorization: `Bearer ${user.token}`,
           'Content-Type': 'multipart/form-data',
         },
       });
@@ -244,17 +237,17 @@ const Blog = () => {
         media: [],
         isFormOpen: false
       }));
-      fetchBlogs();
+      fetchBlogs(); // Refresh the blog list
     } catch (error) {
-      console.error('Error creating blog:', error.response?.data || error.message);
+      console.error('Error creating blog:', error);
       setState(prev => ({
         ...prev,
-        error: 'Unable to create blog. Please check your input and try again.'
+        error: 'Unable to create blog. Please try again.'
       }));
     }
   };
 
-  // Handle media file change and create preview URLs
+  // Handle media file selection
   const handleMediaChange = (e) => {
     const files = Array.from(e.target.files);
     const previews = files.map(file => ({
@@ -268,7 +261,7 @@ const Blog = () => {
     }));
   };
 
-  // Toggle like functionality for a blog post
+  // Toggle like/unlike and refresh count
   const toggleLike = async (blogId) => {
     if (!user) {
       alert("Please log in to like posts.");
@@ -276,9 +269,7 @@ const Blog = () => {
     }
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      // Send a request to toggle the like status
       await axios.post(`${BASE_URL}/blogs/${blogId}/like/`, {}, config);
-      // Fetch the updated like count + liked flag
       const countRes = await axios.get(
         `${BASE_URL}/blogs/${blogId}/like/count/`,
         config
@@ -296,7 +287,6 @@ const Blog = () => {
     }
   };
 
-  // Delay search while typing
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       handleSearch(state.searchQuery);
@@ -304,10 +294,76 @@ const Blog = () => {
     return () => clearTimeout(timeoutId);
   }, [state.searchQuery]);
 
-  // Filter blogs locally based on the search query (if not using API results)
   const filteredBlogs = state.blogs.filter(blog =>
     blog.title.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
     blog.content.toLowerCase().includes(state.searchQuery.toLowerCase())
+  );
+
+  // Renders a single post (used in both search and main list)
+  const renderPost = (blog, highlight = false) => (
+    <div className="blog-post" key={blog.id}>
+      <div className="post-header">
+        <div className="title-section">
+          <span className="author">
+            By <Link to={`/profile/${blog.author_id}`} className="author-link">
+              {highlight ? highlightText(blog.author, state.searchQuery) : blog.author}
+            </Link>
+          </span>
+          <Link to={`/blog/${blog.id}`} className="post-title-link">
+            <h3>{highlight ? highlightText(blog.title, state.searchQuery) : blog.title}</h3>
+          </Link>
+        </div>
+        <span className="date-created">{formatDateTime(blog.created_at)}</span>
+        {user && user.username === blog.author && (
+          <button className="delete-btn" onClick={() => handleDeleteBlog(blog.id)}>
+            Delete
+          </button>
+        )}
+      </div>
+
+      <Link to={`/blog/${blog.id}`} className="post-content-link">
+        <p>
+          {blog.content.length > 150
+            ? `${blog.content.substring(0, 150)}...`
+            : blog.content}
+        </p>
+      </Link>
+
+      {blog.media && blog.media.length > 0 && (
+        <div className="post-media-preview">
+          {(blog.media[0].file.endsWith('.mp4') || blog.media[0].file.endsWith('.mov')) ? (
+            <video controls className="media-preview">
+              <source src={blog.media[0].file} type="video/mp4" />
+              Your browser does not support videos.
+            </video>
+          ) : (
+            <img
+              src={blog.media[0].file}
+              alt={`Preview for ${blog.title}`}
+              className="media-preview"
+            />
+          )}
+          {blog.media.length > 1 && (
+            <span className="media-count">+{blog.media.length - 1} more</span>
+          )}
+        </div>
+      )}
+
+      <div className="post-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <button
+          className={`like-btn ${likeData[blog.id]?.liked ? 'liked' : ''}`}
+          onClick={() => toggleLike(blog.id)}
+          aria-label={likeData[blog.id]?.liked ? 'Unlike' : 'Like'}
+        >
+          {likeData[blog.id]?.liked ? '💔' : '❤️'} {likeData[blog.id]?.likeCount ?? 0}
+        </button>
+        {user && (
+          <button className="bookmark-btn" onClick={() => handleBookmark(blog.id)}>
+            🔖
+          </button>
+        )}
+      </div>
+    </div>
   );
 
   return (
@@ -370,171 +426,19 @@ const Blog = () => {
           )}
         </div>
 
-        {/* Display search results if there is a query */}
-        {state.searchQuery && (
+        {state.searchQuery ? (
           <div className="search-results">
-            {state.searchResults.users && state.searchResults.users.length > 0 && (
-              <div className="search-section">
-                <h3>Users</h3>
-                <div className="users-list">
-                  {state.searchResults.users.map(userItem => (
-                    <Link
-                      to={`/profile/${userItem.id}`}
-                      key={userItem.id}
-                      className="user-result"
-                    >
-                      <div className="user-item">
-                        <span className="username">{highlightText(userItem.username, state.searchQuery)}</span>
-                        {userItem.email && (
-                          <span className="email">{userItem.email}</span>
-                        )}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-            {state.searchResults.blogs && state.searchResults.blogs.length > 0 && (
-              <div className="search-section">
-                <h3>Posts</h3>
-                <div className="blog-posts search-posts">
-                  {state.searchResults.blogs.map(blog => (
-                    <div className="blog-post" key={blog.id}>
-                      <div className="post-header">
-                        <Link to={`/blog/${blog.id}`} className="post-title-link">
-                          <h3>{highlightText(blog.title, state.searchQuery)}</h3>
-                        </Link>
-                        {user && user.username === blog.author && (
-                          <button
-                            className="delete-btn"
-                            onClick={() => handleDeleteBlog(blog.id)}
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-
-                      <Link to={`/blog/${blog.id}`} className="post-content-link">
-                        <p>
-                          {blog.content.length > 150
-                            ? `${blog.content.substring(0, 150)}...`
-                            : blog.content}
-                        </p>
-                      </Link>
-
-                      <div className="post-footer">
-                        <span>{formatDateTime(blog.created_at)}</span>
-                        <span className="author">
-                          By <Link to={`/profile/${blog.author_id}`} className="author-link">{blog.author}</Link>
-                        </span>
-                        {user && (
-                          <>
-                            <button
-                              className="bookmark-btn"
-                              onClick={() => handleBookmark(blog.id)}
-                            >
-                              Bookmark
-                            </button>
-                            <div className="like-container">
-                              <button
-                                className={`like-btn ${likeData[blog.id]?.liked ? 'liked' : ''}`}
-                                onClick={() => toggleLike(blog.id)}
-                                aria-label="Like"
-                              ></button>
-                              <span className="like-count">
-                                {likeData[blog.id]?.likeCount || 0}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {(!state.searchResults.users?.length && !state.searchResults.blogs?.length) && (
-              <div className="no-results">
-                No matching users or posts found
-              </div>
-            )}
+            {state.searchResults.blogs.length > 0
+              ? state.searchResults.blogs.map(b => renderPost(b, true))
+              : <div className="no-results">No matching posts found</div>
+            }
           </div>
-        )}
-
-        {/* Display regular blog posts when there's no search query */}
-        {!state.searchQuery && (
+        ) : (
           <div className="blog-posts">
-            {filteredBlogs.length === 0 ? (
-              <div className="empty-state">
-                {state.searchQuery ? "No matching posts found" : "No blog posts found"}
-              </div>
-            ) : (
-              filteredBlogs.map((blog) => (
-                <div className="blog-post" key={blog.id}>
-                  <div className="post-header">
-                    <Link to={`/blog/${blog.id}`} className="post-title-link">
-                      <h3>{blog.title}</h3>
-                    </Link>
-                    {user && user.username === blog.author && (
-                      <button
-                        className="delete-btn"
-                        onClick={() => handleDeleteBlog(blog.id)}
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-
-                  <Link to={`/blog/${blog.id}`} className="post-content-link">
-                    <p>
-                      {blog.content.length > 150
-                        ? `${blog.content.substring(0, 150)}...`
-                        : blog.content}
-                    </p>
-                  </Link>
-
-                  {blog.media && blog.media.length > 0 && (
-                    <div className="post-media-preview">
-                      {blog.media[0].file.endsWith('.mp4') || blog.media[0].file.endsWith('.mov') ? (
-                        <video controls className="media-preview">
-                          <source src={blog.media[0].file} type="video/mp4" />
-                          Your browser does not support videos.
-                        </video>
-                      ) : (
-                        <img
-                          src={blog.media[0].file}
-                          alt={`Preview for ${blog.title}`}
-                          className="media-preview"
-                        />
-                      )}
-                      {blog.media.length > 1 && (
-                        <span className="media-count">+{blog.media.length - 1} more</span>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="post-footer">
-                    <span>{formatDateTime(blog.created_at)}</span>
-                    <span className="author">
-                      By <Link to={`/profile/${blog.author_id}`} className="author-link">{blog.author}</Link>
-                    </span>
-                    {user && (
-                      <>
-                        <button
-                          className="bookmark-btn"
-                          onClick={() => handleBookmark(blog.id)}
-                        >
-                          Bookmark
-                        </button>
-                        <button className="like-btn" onClick={() => toggleLike(blog.id)}>
-                          {likeData[blog.id]?.liked ? 'Unlike' : 'Like'} ({likeData[blog.id]?.likeCount || 0})
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
+            {filteredBlogs.length > 0
+              ? filteredBlogs.map(b => renderPost(b))
+              : <div className="empty-state">No blog posts found</div>
+            }
           </div>
         )}
 
@@ -571,7 +475,7 @@ const Blog = () => {
                       <div className="avatar">
                         {user && user.username ? user.username[0].toUpperCase() : ''}
                       </div>
-                      <span className="username">{user?.username}</span>
+                      <span className="username">{user.username}</span>
                     </div>
                     <input
                       type="text"
@@ -629,7 +533,6 @@ const Blog = () => {
                               {file.type === 'video' ? (
                                 <video controls className="preview-content">
                                   <source src={file.url} type="video/mp4" />
-                                  Your browser does not support videos.
                                 </video>
                               ) : (
                                 <img

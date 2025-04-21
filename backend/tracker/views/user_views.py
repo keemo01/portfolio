@@ -20,6 +20,14 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     permission_classes = (AllowAny,)
 
 
+class PublicTokenRefreshView(TokenRefreshView):
+    """
+    Allow anonymous clients to POST a refresh token
+    and receive new access (and refresh) tokens.
+    """
+    permission_classes = (AllowAny,)
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup(request):
@@ -39,6 +47,7 @@ def signup(request):
 
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def logout(request):
     """Blacklist the provided refresh token to log out"""
@@ -47,7 +56,10 @@ def logout(request):
         try:
             RefreshToken(refresh_token).blacklist()
         except Exception as e:
-            return Response({'detail': f'Invalid or expired token: {e}'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': f'Invalid or expired token: {e}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
     return Response({'detail': 'Logout successful'}, status=status.HTTP_200_OK)
 
 
@@ -76,7 +88,12 @@ def user_profile(request):
         serializer = UserSerializer(user, context={'current_user': user})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    serializer = UserSerializer(user, data=request.data, partial=True, context={'current_user': user})
+    serializer = UserSerializer(
+        user,
+        data=request.data,
+        partial=True,
+        context={'current_user': user}
+    )
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -92,12 +109,21 @@ def change_password(request):
     old_password = request.data.get('old_password')
     new_password = request.data.get('new_password')
     if not old_password or not new_password:
-        return Response({'detail': 'Provide old_password and new_password'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'detail': 'Provide old_password and new_password'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     if not user.check_password(old_password):
-        return Response({'detail': 'Old password incorrect'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'detail': 'Old password incorrect'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     user.set_password(new_password)
     user.save()
-    return Response({'detail': 'Password updated successfully'}, status=status.HTTP_200_OK)
+    return Response(
+        {'detail': 'Password updated successfully'},
+        status=status.HTTP_200_OK
+    )
 
 
 @api_view(['GET'])

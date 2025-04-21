@@ -11,7 +11,7 @@ const CoinContextProvider = (props) => {
     symbol: '$',
   });
 
-  // Function to fetch all coin data from the API
+  // Function to fetch all coins from the API
   const fetchAllCoin = async () => {
     const options = {
       method: 'GET',
@@ -25,16 +25,17 @@ const CoinContextProvider = (props) => {
   };
   
   useEffect(() => {
-    fetchAllCoin(); // Retrieve coin data anytime there is a change in value.
+    fetchAllCoin(); // Fetch all coins when the component mounts
   }, [currency]);
 
   const contextValue = {
-    // Values to be passed to context
+    // Fetch all coins
     allCoin, currency, setCurrency
   };
 
   return (
-    // Give the context values to the children components
+    // Provide the context to all children components
+    // This allows any child component to access the context value
     <CoinContext.Provider value={contextValue}>
       {props.children}
     </CoinContext.Provider>

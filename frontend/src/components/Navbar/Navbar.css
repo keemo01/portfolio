@@ -60,8 +60,8 @@
 .navbar-cta {
   display: flex;
   align-items: center;
-  gap: 0.25rem !important;     /* tight gap */
-  padding-right: 2% !important; /* right padding */
+  gap: 0.25rem !important;    
+  padding-right: 2% !important; 
 }
 
 /* Currency selector */
