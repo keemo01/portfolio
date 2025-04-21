@@ -2,19 +2,24 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 
-from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
+from rest_framework_simplejwt.views import TokenVerifyView
 
-# Views from specific modules
+from .views.user_views import (
+    signup,
+    CustomTokenObtainPairView,
+    PublicTokenRefreshView,
+    logout,
+)
 from .views import user_views, blogs_views, portfolio_views, search_views, follow_views
 from . import views  
 
 urlpatterns = [
     # Authentication
-    path('auth/signup/', user_views.signup, name='signup'), # User registration
-    path('auth/login/', user_views.CustomTokenObtainPairView.as_view(), name='token_obtain_pair'), # User login
-    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'), # Token refresh
+    path('auth/signup/', signup, name='signup'), # User registration
+    path('auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'), # User login
+    path('auth/refresh/', PublicTokenRefreshView.as_view(), name='token_refresh'), # Token refresh
     path('auth/verify/', TokenVerifyView.as_view(), name='token_verify'), # Token verification
-    path('auth/logout/', user_views.logout, name='logout'), # User logout
+    path('auth/logout/', logout, name='logout'), # User logout
 
     # Protected JWT check
     path('auth/test-token/', user_views.test_token, name='test_token'),
