@@ -3,6 +3,7 @@ import time
 import hashlib
 import logging
 import requests
+from decimal import Decimal
 from urllib.parse import urlencode
 from datetime import timedelta
 from django.utils import timezone
@@ -11,14 +12,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
+from tracker.views.portfolio_utils import aggregate_portfolio_holdings, calculate_portfolio_metrics
 from tracker.models import PortfolioHolding, APIKey, PortfolioHistory
 from .binance_utils import get_binance_price  
-from .portfolio_utils import aggregate_portfolio_holdings, calculate_portfolio_metrics
+
 
 logger = logging.getLogger(__name__)
 
-# Added a session to reuse HTTP connections for efficiency.
-session = requests.Session()  # Reusing session for all requests
+session = requests.Session() # Reuse the session for multiple requests
 
 def get_bybit_price(coin):
     """
@@ -32,7 +33,8 @@ def get_bybit_price(coin):
     params = {"category": "spot", "symbol": f"{coin}USDT"}
     try:
         logger.info("Fetching Bybit price for %s with params: %s", coin, params)
-        response = session.get(url, params=params, timeout=5)  # Using session here
+        # Using session to make the request 
+        response = session.get(url, params=params, timeout=5) 
         if response.status_code == 200:
             data = response.json()
             if data.get("retCode") == 0 and data.get("result", {}).get("list"):
@@ -135,7 +137,7 @@ def get_bybit_cost_basis(api_key, secret_key, coin, amount):
     try:
         cost_endpoint = "/v5/position/info"
         cost_params = {
-            "category": "linear",  # Changed from spot to linear
+            "category": "linear",  # Changed from Spot as  Linear is the default for Bybit
             "symbol": f"{coin}USDT"
         }
         
@@ -173,6 +175,8 @@ def get_bybit_cost_basis(api_key, secret_key, coin, amount):
     except Exception as e:
         logger.debug("Could not fetch cost basis for %s: %s", coin, str(e))
         return None
+    
+
 
 @api_view(['POST'])
 @authentication_classes([JWTAuthentication])
@@ -208,6 +212,51 @@ def add_holding(request):
         return Response({'detail': 'Holding added'}, status=status.HTTP_201_CREATED)
     except ValueError:
         return Response({'detail': 'Invalid numeric values'}, status=status.HTTP_400_BAD_REQUEST)
+
+def fetch_user_holdings(user):
+    """
+    Fetch all holdings (Bybit, Binance, Manual), aggregate them,
+    and return (consolidated_dict, metrics_dict, errors_list).
+    """
+    errors = []
+    combined = []
+
+    # Bybit API keys
+    keys = APIKey.objects.filter(user=user).first()
+
+    # Bybit
+    if keys and keys.bybit_api_key and keys.bybit_secret_key:
+        try:
+            for h in get_bybit_holdings(keys.bybit_api_key, keys.bybit_secret_key):
+                price = get_bybit_price(h["coin"])
+                if price is None:
+                    errors.append(f"No price for {h['coin']} on Bybit")
+                    continue
+                h["current_price"] = price
+                h["current_value"] = Decimal(str(h["amount"])) * Decimal(str(price))
+                combined.append(h)
+        except Exception as e:
+            errors.append(f"Bybit fetch error: {e}")
+    
+
+    # Manual holdings
+    for m in PortfolioHolding.objects.filter(user=user):
+        coin = m.coin.upper()
+        price = get_bybit_price(coin) 
+        if price is None:
+            errors.append(f"No price for manual {coin}")
+            continue
+        amt = Decimal(str(m.amount))
+        combined.append({
+            "exchange": "Manual",
+            "account_type": "Manual",
+            "coin": coin,
+            "amount": float(amt),
+            "transferable": float(amt),
+            "original_value": amt * Decimal(str(m.purchase_price)),
+            "current_price": price,
+            "current_value": amt * Decimal(str(price))
+        })
 
 @api_view(['POST', 'GET'])
 @authentication_classes([JWTAuthentication])
@@ -325,7 +374,7 @@ def portfolio(request):
                     if current_price:
                         portfolio_data.append({
                             'exchange': 'Binance',
-                            'account_type': 'Spot',  # Consistent account_type across all sources
+                            'account_type': 'Spot',  # Assuming all Binance holdings are in Spot
                             'coin': asset,
                             'amount': str(amount),
                             'current_price': current_price,
@@ -390,6 +439,13 @@ def portfolio(request):
     # Aggregate holdings
     consolidated = aggregate_portfolio_holdings(portfolio_data)
     metrics = calculate_portfolio_metrics(consolidated)
+    
+    
+    total_pnl_absolute = metrics['total_value'] - metrics['total_cost']
+    # Percentage P/L comes from your metrics dict (or zero if not set)
+    total_pnl_percentage = metrics.get('total_pnl_percentage', Decimal('0'))
+    
+    
     
     # Convert consolidated data back to list format
     portfolio_data = []

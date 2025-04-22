@@ -129,3 +129,7 @@ class UserAuthTests(APITestCase):
         # Check that token cannot refresh again
         resp2 = self.client.post(self.refresh_url, {'refresh': refresh_token})
         self.assertEqual(resp2.status_code, status.HTTP_401_UNAUTHORIZED)
+
+##############################
+# Portfolio tests
+##############################

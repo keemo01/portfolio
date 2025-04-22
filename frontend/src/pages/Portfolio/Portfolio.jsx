@@ -313,12 +313,6 @@ const Portfolio = () => {
               <span>Total Cost:</span>
               <span className="value">${formatNumber(portfolioMetrics.total_cost)}</span>
             </div>
-            <div className="detail-row">
-              <span>Total P/L:</span>
-              <span className={`value ${totalValue - portfolioMetrics.total_cost > 0 ? 'text-success' : 'text-danger'}`}>
-                ${formatNumber(totalValue - portfolioMetrics.total_cost)}
-              </span>
-            </div>
           </Card.Body>
         </Card>
       </Col>
