@@ -14,12 +14,50 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from tracker.views.portfolio_utils import aggregate_portfolio_holdings, calculate_portfolio_metrics
 from tracker.models import PortfolioHolding, APIKey, PortfolioHistory
-from .binance_utils import get_binance_price  
 
 
 logger = logging.getLogger(__name__)
 
 session = requests.Session() # Reuse the session for multiple requests
+
+# Shared session for Binance account calls
+binance_session = requests.Session()
+
+SYMBOL_OVERRIDES = {
+    'SNM': 'SONM',   # SONM is the correct symbol for SONM on Binance
+}
+# These are not tradable on Binance
+IGNORE_BINANCE_SYMBOLS = {'SNM', 'SONM'} 
+
+def get_binance_price(coin):
+    """
+    Return the USDT price for `coin`.
+    - USDT → 1.0
+    - Applies SYMBOL_OVERRIDES
+    - Returns float price or None
+    """
+    uc = coin.upper()
+    if uc == 'USDT':
+        return 1.0
+
+    if uc in IGNORE_BINANCE_SYMBOLS:
+        # SNM/SONM aren't tradable on Binance
+        return None
+
+    symbol = SYMBOL_OVERRIDES.get(uc, uc)
+    pair = f"{symbol}USDT"
+    try:
+        resp = binance_session.get(
+            "https://api.binance.com/api/v3/ticker/price",
+            params={'symbol': pair},
+            timeout=5
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return float(data['price'])
+    except Exception as e:
+        logger.warning("Binance: no price for %s (tried %s): %s", coin, pair, e)
+        return None
 
 def get_bybit_price(coin):
     """
@@ -99,8 +137,7 @@ def get_bybit_holdings(api_key, secret_key):
                         for coin_data in data.get('result', {}).get('balance', []):
                             wallet_balance = float(coin_data.get('walletBalance', '0'))
                             if wallet_balance > 0:
-                                # Get the cost basis for this coin
-                                # Note: Spot holdings cannot have a cost basis only futures can have a return.
+                                # Fetch cost basis for the coin
                                 try:
                                     original_value = get_bybit_cost_basis(
                                         api_key, 
@@ -137,7 +174,7 @@ def get_bybit_cost_basis(api_key, secret_key, coin, amount):
     try:
         cost_endpoint = "/v5/position/info"
         cost_params = {
-            "category": "linear",  # Changed from Spot as  Linear is the default for Bybit
+            "category": "linear",  # Changed from Spot as  Bybit doesn't support cost basis for Spot
             "symbol": f"{coin}USDT"
         }
         
@@ -195,7 +232,7 @@ def add_holding(request):
         return Response({'detail': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
     
     try:
-        # Validate numeric inputs
+        # Normalize coin symbol
         amount = float(amount)
         purchase_price = float(purchase_price)
         
@@ -258,242 +295,171 @@ def fetch_user_holdings(user):
             "current_value": amt * Decimal(str(price))
         })
 
-@api_view(['POST', 'GET'])
+@api_view(['GET', 'POST'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def portfolio(request):
     """
     GET or POST /api/portfolio/
-    Returns current portfolio holdings from exchanges and manual entries.
+    Returns consolidated portfolio from Bybit, Binance, and manual holdings.
     """
     user = request.user
+
+    # Load API keys
     try:
         api_keys = APIKey.objects.get(user=user)
-        # Check for active API keys early
         has_binance = bool(api_keys.binance_api_key and api_keys.binance_secret_key)
         has_bybit = bool(api_keys.bybit_api_key and api_keys.bybit_secret_key)
-        
-        if not has_binance and not has_bybit:
-            logger.info("No active API keys found for user %s", user.username)
-            # Check for manual holdings before returning empty portfolio
-            if not PortfolioHolding.objects.filter(user=user).exists():
-                return Response({
-                    'detail': 'No active API keys or manual holdings found',
-                    'portfolio': [],
-                    'total_value': 0,
-                    'has_api_keys': False,
-                    'errors': None
-                }, status=status.HTTP_200_OK)
-    except APIKey.DoesNotExist:
-        # Check for manual holdings before returning empty portfolio
-        if not PortfolioHolding.objects.filter(user=user).exists():
-            logger.info("API keys not configured for user %s", user.username)
+        if not (has_binance or has_bybit) and not PortfolioHolding.objects.filter(user=user).exists():
             return Response({
-                'detail': 'API keys not configured',
-                'portfolio': [],
-                'total_value': 0,
-                'has_api_keys': False,
-                'errors': None
+                'detail': 'No API keys or manual holdings',
+                'portfolio': [], 'total_value': 0, 'errors': None
+            }, status=status.HTTP_200_OK)
+    except APIKey.DoesNotExist:
+        api_keys = None
+        if not PortfolioHolding.objects.filter(user=user).exists():
+            return Response({
+                'detail': 'No API keys or manual holdings',
+                'portfolio': [], 'total_value': 0, 'errors': None
             }, status=status.HTTP_200_OK)
 
     portfolio_data = []
     errors = []
-    
-    # Initialize a session for HTTP requests
-    price_cache = {}  # Cache for prices to avoid duplicate API calls
+    price_cache = {}
 
-    # Fetch Exchange Holdings from Bybit
-    if api_keys.bybit_api_key and api_keys.bybit_secret_key:
+    # — Bybit holdings —
+    if api_keys and has_bybit:
         try:
-            holdings = get_bybit_holdings(api_keys.bybit_api_key, api_keys.bybit_secret_key)
-            if holdings:
-                for holding in holdings:
-                    coin = holding['coin']
-                    amount = float(holding['amount'])
-                    # Use cached price if available
-                    if coin in price_cache:
-                        current_price = price_cache[coin]
-                    else:
-                        current_price = get_bybit_price(coin)
-                        price_cache[coin] = current_price
-                    if current_price is not None:
-                        value = amount * current_price
-                        # Calculate original_value from API response or fall back to current value
-                        original_value = holding['original_value'] if holding['original_value'] is not None else value
-                        
-                        portfolio_data.append({
-                            'exchange': 'Bybit',
-                            'account_type': holding['account_type'],
-                            'coin': coin,
-                            'amount': str(amount),
-                            'current_price': current_price,
-                            'current_value': value,
-                            'transferable': str(holding['transferable']),
-                            'original_value': original_value  # Cost basis from Bybit
-                        })
-                        logger.info("Added %s from Bybit: %s @ $%s = $%s (original: $%s)", 
-                                  coin, amount, current_price, value, original_value)
+            bybit_balances = get_bybit_holdings(api_keys.bybit_api_key, api_keys.bybit_secret_key)
+            for h in bybit_balances:
+                coin = h['coin']
+                amt = float(h['amount'])
+                price = price_cache.get(coin) or get_bybit_price(coin)
+                price_cache[coin] = price
+                if price is None:
+                    errors.append(f"No price for {coin} on Bybit")
+                    continue
+                portfolio_data.append({
+                    'exchange': 'Bybit',
+                    'account_type': h['account_type'],
+                    'coin': coin,
+                    'amount': str(amt),
+                    'current_price': price,
+                    'current_value': amt * price,
+                    'transferable': str(h['transferable']),
+                    'original_value': h.get('original_value') or amt * price
+                })
         except Exception as e:
-            error_msg = f"Error fetching Bybit holdings: {str(e)}"
-            logger.error(error_msg)
-            errors.append(error_msg)
+            logger.error("Bybit error: %s", e)
+            errors.append(f"Bybit error: {e}")
 
-    # Fetch Exchange Holdings from Binance
-    if api_keys.binance_api_key and api_keys.binance_secret_key:
+    # — Binance holdings —
+    if api_keys and has_binance:
         try:
-            # Add explicit timeout and use session for efficiency
-            timestamp = str(int(time.time() * 1000))
-            binance_params = { 'timestamp': timestamp, 'recvWindow': '5000' }
-            query_string = urlencode(binance_params)
-            signature = hmac.new(
+            ts = str(int(time.time() * 1000))
+            params = {'timestamp': ts, 'recvWindow': 5000}
+            qs = urlencode(params)
+            sig = hmac.new(
                 api_keys.binance_secret_key.encode('utf-8'),
-                query_string.encode('utf-8'),
+                qs.encode('utf-8'),
                 hashlib.sha256
             ).hexdigest()
-            binance_url = 'https://api.binance.com/api/v3/account'
-            headers = {
-                'X-MBX-APIKEY': api_keys.binance_api_key,
-                'Content-Type': 'application/json'
-            }
-            full_url = f"{binance_url}?{query_string}&signature={signature}"
-            logger.info("Sending request to Binance: %s", full_url)
-            response = session.get(full_url, headers=headers, timeout=10)  # Using session here
-            response.raise_for_status()
-            
-            data = response.json()
-            for balance in data.get('balances', []):
-                amount = float(balance['free']) + float(balance['locked'])
-                if amount > 0:
-                    # Use cached price for Binance as well to avoid duplicate calls
-                    asset = balance['asset']
-                    if asset in price_cache:
-                        current_price = price_cache[asset]
-                    else:
-                        current_price = get_binance_price(asset)
-                        price_cache[asset] = current_price
-                    if current_price:
-                        portfolio_data.append({
-                            'exchange': 'Binance',
-                            'account_type': 'Spot',  # Assuming all Binance holdings are in Spot
-                            'coin': asset,
-                            'amount': str(amount),
-                            'current_price': current_price,
-                            'current_value': amount * current_price,
-                            'transferable': balance['free'],  # I am including the transferable amount
-                            'original_value': None  # Binance doesn't provide cost basis
-                        })
+            url = f"https://api.binance.com/api/v3/account?{qs}&signature={sig}"
+            headers = {'X-MBX-APIKEY': api_keys.binance_api_key}
+
+            resp = binance_session.get(url, headers=headers, timeout=10)
+            resp.raise_for_status()
+            for b in resp.json().get('balances', []):
+                free, locked = float(b['free']), float(b['locked'])
+                amt = free + locked
+                if amt <= 0:
+                    continue
+
+                coin = b['asset']
+                if coin.upper() in IGNORE_BINANCE_SYMBOLS:
+                    # skip SNM/SONM
+                    continue
+
+                price = price_cache.get(coin) or get_binance_price(coin)
+                price_cache[coin] = price
+                if price is None:
+                    errors.append(f"No price for {coin} on Binance")
+                    continue
+
+                portfolio_data.append({
+                    'exchange': 'Binance',
+                    'account_type': 'Spot',
+                    'coin': coin,
+                    'amount': str(amt),
+                    'current_price': price,
+                    'current_value': amt * price,
+                    'transferable': str(free),
+                    'original_value': None
+                })
         except Exception as e:
-            logger.error("Error fetching Binance holdings: %s", str(e))
-            errors.append(f"Binance error: {str(e)}")
+            logger.error("Binance error: %s", e)
+            errors.append(f"Binance error: {e}")
 
-    # Fetch Manual Holdings from PortfolioHolding
-    manual_holdings = PortfolioHolding.objects.filter(user=user)
-    manual_data = {}
-    
-    # Form manual holdings
-    for holding in manual_holdings:
-        coin = holding.coin.upper()
-        amount = float(holding.amount)
-        purchase_price = float(holding.purchase_price)
-        total_cost = amount * purchase_price
-        
-        if coin in manual_data:
-            manual_data[coin]['amount'] += amount
-            manual_data[coin]['total_cost'] += total_cost
-        else:
-            manual_data[coin] = {
-                'amount': amount,
-                'total_cost': total_cost
-            }
+    # — Manual holdings —
+    manual = {}
+    for m in PortfolioHolding.objects.filter(user=user):
+        c = m.coin.upper()
+        a = float(m.amount)
+        cost = a * float(m.purchase_price)
+        manual.setdefault(c, {'amount': 0, 'cost': 0})
+        manual[c]['amount'] += a
+        manual[c]['cost'] += cost
 
-    # Calculate values and add to portfolio data
-    for coin, data in manual_data.items():
-        total_amount = data['amount']
-        total_cost = data['total_cost']
-        
-        # Cached price if available, otherwise try both sources
-        if coin in price_cache:
-            current_price = price_cache[coin]
-        else:
-            current_price = get_bybit_price(coin)
-            if current_price is None:
-                current_price = get_binance_price(coin)
-            price_cache[coin] = current_price
-
-        if current_price is not None:
-            current_value = total_amount * current_price
-            portfolio_data.append({
-                'exchange': 'Manual',
-                'account_type': 'Manual',
-                'coin': coin,
-                'amount': str(total_amount),
-                'current_price': current_price,
-                'current_value': current_value,
-                'transferable': str(total_amount),  # All manual holdings are transferable.
-                'original_value': total_cost  # Total cost as the original value.
-            })
-        else:
-            logger.warning("Could not fetch price for manual holding: %s", coin)
-            errors.append(f"Could not fetch price for {coin}")
-
-    # Aggregate holdings
-    consolidated = aggregate_portfolio_holdings(portfolio_data)
-    metrics = calculate_portfolio_metrics(consolidated)
-    
-    
-    total_pnl_absolute = metrics['total_value'] - metrics['total_cost']
-    # Percentage P/L comes from your metrics dict (or zero if not set)
-    total_pnl_percentage = metrics.get('total_pnl_percentage', Decimal('0'))
-    
-    
-    
-    # Convert consolidated data back to list format
-    portfolio_data = []
-    for coin, data in consolidated.items():
+    for coin, d in manual.items():
+        price = price_cache.get(coin) or get_bybit_price(coin) or get_binance_price(coin)
+        price_cache[coin] = price
+        if price is None:
+            errors.append(f"No price for manual {coin}")
+            continue
+        amt = d['amount']
         portfolio_data.append({
+            'exchange': 'Manual',
+            'account_type': 'Manual',
             'coin': coin,
-            'amount': str(data['total_amount']),
-            'current_price': float(data['current_price']),
-            'current_value': float(data['total_value']),
-            'transferable': str(data['transferable']),
-            'original_value': float(data['original_value']) if data['original_value'] else None,
-            'sources': data['sources'],
-            'pnl_percentage': float(metrics['pnl'][coin]['percentage']) if data['original_value'] else None
+            'amount': str(amt),
+            'current_price': price,
+            'current_value': amt * price,
+            'transferable': str(amt),
+            'original_value': d['cost']
         })
 
-    # Save historical data with aggregated values
+    # — Consolidate holdings —
+    consolidated = aggregate_portfolio_holdings(portfolio_data)
+    metrics = calculate_portfolio_metrics(consolidated)
+
+    # — Save history —
     PortfolioHistory.objects.create(
         user=user,
         total_value=metrics['total_value'],
-        coin_values={k: float(v['total_value']) for k, v in consolidated.items()},
-        active_exchanges=[ex.lower() for ex in metrics['exchange_distribution'].keys()]
+        coin_values={c: float(d['total_value']) for c, d in consolidated.items()},
+        active_exchanges=[ex.lower() for ex in metrics['exchange_distribution']]
     )
 
-    # Calculate daily P&L
-    target_time = timezone.now() - timedelta(hours=24)
-    previous_record = PortfolioHistory.objects.filter(
-        user=user, 
-        timestamp__lte=target_time  # Filter for records older than 24 hours
-    ).order_by('-timestamp').first()
-    
-    if previous_record and previous_record.total_value > 0:
-        daily_pnl_absolute = metrics['total_value'] - previous_record.total_value
-        daily_pnl_percentage = (daily_pnl_absolute / previous_record.total_value) * 100
-    else:
-        daily_pnl_absolute = None
-        daily_pnl_percentage = None
-    
+    # — Build response —
+    resp_list = [{
+        'coin': c,
+        'amount': str(d['total_amount']),
+        'current_price': float(d['current_price']),
+        'current_value': float(d['total_value']),
+        'transferable': str(d['transferable']),
+        'original_value': float(d['original_value']),
+        'sources': d['sources']
+    } for c, d in consolidated.items()]
 
     return Response({
-        'portfolio': sorted(portfolio_data, key=lambda x: x['current_value'], reverse=True),
+        'portfolio': sorted(resp_list, key=lambda x: x['current_value'], reverse=True),
         'total_value': float(metrics['total_value']),
         'total_cost': float(metrics['total_cost']),
         'allocation': metrics['allocation'],
         'exchange_distribution': {k: float(v) for k, v in metrics['exchange_distribution'].items()},
-        'daily_pnl': float(daily_pnl_absolute) if daily_pnl_absolute is not None else None,
-        'daily_pnl_percentage': float(daily_pnl_percentage) if daily_pnl_percentage is not None else None,
-        'errors': errors if errors else None
+        'errors': errors or None
     }, status=status.HTTP_200_OK)
+
     
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
@@ -510,39 +476,43 @@ def portfolio_history(request):
             days = 30
     except ValueError:
         days = 30
-    
-    # Get and normalize coin parameter
+
+    # Validate coin parameter
     coin = request.query_params.get('coin')
     if coin:
-        coin = coin.upper()  # Normalize coin to uppercase
-    
+        coin = coin.upper()
+
     start_date = timezone.now() - timedelta(days=days)
-    
-    # Get history records
+
+    # Fetch history in time window
     histories = PortfolioHistory.objects.filter(
-        user=user, 
+        user=user,
         timestamp__gte=start_date
     ).order_by('timestamp')
 
     history_data = []
+
+    # Determine current exchanges
+    # Check if user has API keys for exchanges
     current_exchanges = set()
     if hasattr(user, 'api_keys'):
         if user.api_keys.binance_api_key:
             current_exchanges.add('binance')
         if user.api_keys.bybit_api_key:
             current_exchanges.add('bybit')
+    # Mark as manual if no API keys are present
+    if not current_exchanges:
+        current_exchanges.add('manual')
 
+    # Filter records to only those matching current_exchanges
     for record in histories:
         try:
-            # Check if the record's exchanges match the current exchanges
             record_exchanges = set(record.active_exchanges or [])
             if record_exchanges == current_exchanges:
                 if coin:
-                    coin_values = record.coin_values or {}
-                    value = float(coin_values.get(coin, 0))
+                    value = float((record.coin_values or {}).get(coin, 0))
                 else:
                     value = float(record.total_value)
-
                 history_data.append({
                     'timestamp': record.timestamp.isoformat(),
                     'value': value
@@ -552,6 +522,7 @@ def portfolio_history(request):
             continue
 
     return Response({'history': history_data}, status=status.HTTP_200_OK)
+
 
 # API key management 
 @api_view(['POST', 'GET', 'DELETE'])
