@@ -131,9 +131,12 @@ def change_password(request):
 @permission_classes([IsAuthenticated])
 def user_blogs(request):
     """List all blogs created by the authenticated user"""
-    blogs = Blog.objects.filter(author=request.user)
+    blogs = Blog.objects.filter(author=request.user).order_by('-created_at')
     serializer = BlogSerializer(blogs, many=True, context={'request': request})
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response({
+        'blogs': serializer.data,
+        'count':  blogs.count()
+    }, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

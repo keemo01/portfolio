@@ -101,3 +101,4 @@ def calculate_portfolio_metrics(consolidated_holdings):
         metrics['total_pnl_percentage'] = (total_pnl / metrics['total_cost'] * 100)
     
     return metrics
+

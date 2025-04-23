@@ -13,6 +13,7 @@ from .views.user_views import (
 from .views import user_views, blogs_views, portfolio_views, search_views, follow_views
 from . import views  
 
+
 urlpatterns = [
     # Authentication
     path('auth/signup/', signup, name='signup'), # User registration
