@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { UserContext } from '../../context/UserContext';
 import './Blog.css';
 
 const BASE_URL = 'http://127.0.0.1:8000/api';
 const NEWS_API_KEY = '7e07333e33234db8ac28e319fd52cdd4';
+
+
 
 // Function to format date and time
 const formatDateTime = (dateString) => {
@@ -48,6 +50,14 @@ const Blog = () => {
   // This will hold the like count and liked status for each blog post
   const [likeData, setLikeData] = useState({});
   const { user } = useContext(UserContext);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) {
+      // kick them out
+      navigate('/login', { replace: true });
+    }
+  }, [user, navigate]);
 
   // Fetch blog posts from the API
   // This function fetches all blog posts and their like counts
@@ -109,23 +119,24 @@ const Blog = () => {
 
   // Fetch blogs and news on component mount
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        await Promise.all([fetchBlogs(), fetchNews()]);
-      } catch (error) {
-        setState(prev => ({
-          ...prev,
-          error: 'Failed to load data. Please refresh the page.'
-        }));
-      } finally {
-        setState(prev => ({ ...prev, isLoading: false }));
-      }
-    };
-    fetchData(); // Fetch blogs and news
-    return () => {
-      state.mediaPreview.forEach(preview => URL.revokeObjectURL(preview.url));
-    };
-  }, []);
+  if (!user) {
+            setState(prev => ({ ...prev, isLoading: false }));
+            return;
+          }
+  const fetchData = async () => {
+    try {
+      await Promise.all([fetchBlogs(), fetchNews()]);
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: 'Failed to load data. Please refresh the page.'
+      }));
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+  fetchData();
+  }, [user]);
 
   useEffect(() => {
     if (user) {

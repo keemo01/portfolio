@@ -17,13 +17,27 @@ const UserProfile = () => {
 
   // Get the current user from local storage
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const token = localStorage.getItem('access_token');
+
+  // Redirect to login if no token
+  useEffect(() => {
+    if (!token) {
+      navigate('/login', { replace: true });
+    }
+  }, [token, navigate]);
 
   useEffect(() => {
     const fetchUserData = async () => {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('access_token'); // Get the token from local storage
-      
+
+      // If no token redirect to login
+      if (!token) { 
+        setError('Please login to view this profile');
+        setLoading(false);
+        return;
+      }
+
       const config = {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -31,7 +45,7 @@ const UserProfile = () => {
       };
 
       try {
-        // Fetch the user profile (using the updated serializer that returns followers_count and is_following)
+        // Fetch profile
         const profileResponse = await axios.get(
           `${BASE_URL}/user/profile/${userId}/`,
           config
@@ -41,7 +55,7 @@ const UserProfile = () => {
         setFollowersCount(profileData.followers_count || 0);
         setIsFollowing(profileData.is_following);
 
-        // Fetch the user's blog posts
+        // Fetch user's posts
         const postsResponse = await axios.get(
           `${BASE_URL}/user/${userId}/posts/`,
           config
@@ -50,7 +64,8 @@ const UserProfile = () => {
       } catch (err) {
         console.error("Error fetching user data:", err);
         if (err.response?.status === 401) {
-          setError("Please login to view this profile");
+          // Unauthorized, go back to login
+          navigate('/login', { replace: true });
         } else {
           setError("Failed to load user profile. Please try again.");
         }
@@ -62,15 +77,14 @@ const UserProfile = () => {
     if (userId) {
       fetchUserData();
     }
-  }, [userId, currentUser]);
+  }, [userId, token, navigate]);
 
+  // Handle follow/unfollow
   const handleFollow = async () => {
+    if (!token) return navigate('/login', { replace: true });
     try {
-      const token = localStorage.getItem('access_token');
-      const config = {
-        headers: { 'Authorization': `Bearer ${token}` },
-      };
-
+      // Check if already following
+      const config = { headers: { Authorization: `Bearer ${token}` } }; // Add token to config
       const response = await axios.post(
         `${BASE_URL}/follow/${userId}/`,
         {},
@@ -78,20 +92,17 @@ const UserProfile = () => {
       );
       alert(response.data.detail);
       setIsFollowing(true);
-      setFollowersCount(prev => prev + 1);
-    } catch (err) {
-      console.error("Error following user:", err.response || err);
+      setFollowersCount(c => c + 1); // Increase followers count
+    } catch {
       alert("Failed to follow user. Please try again.");
     }
   };
 
+  // Handle unfollow
   const handleUnfollow = async () => {
+    if (!token) return navigate('/login', { replace: true });
     try {
-      const token = localStorage.getItem('access_token');
-      const config = {
-        headers: { 'Authorization': `Bearer ${token}` },
-      };
-
+      const config = { headers: { Authorization: `Bearer ${token}` } };
       const response = await axios.post(
         `${BASE_URL}/unfollow/${userId}/`,
         {},
@@ -99,9 +110,8 @@ const UserProfile = () => {
       );
       alert(response.data.detail);
       setIsFollowing(false);
-      setFollowersCount(prev => (prev > 0 ? prev - 1 : 0));
-    } catch (err) {
-      console.error("Error unfollowing user:", err.response || err);
+      setFollowersCount(c => Math.max(0, c - 1));
+    } catch {
       alert("Failed to unfollow user. Please try again.");
     }
   };

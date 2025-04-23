@@ -16,6 +16,8 @@ from tracker.serializers import BlogSerializer, BookmarkSerializer, CommentSeria
 
 # Blog Endpoints
 @api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def get_blogs(request):
     blogs = Blog.objects.all().order_by('-created_at')
     serializer = BlogSerializer(blogs, many=True, context={'request': request})  # Pass request

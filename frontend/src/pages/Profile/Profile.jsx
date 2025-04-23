@@ -29,6 +29,13 @@ const ProfilePage = () => {
   // State variables for modals
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
+ 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (user === null) {
+      navigate('/login', { replace: true });
+    }
+  }, [user, navigate]);
 
   // This function checks if the user is logged in and fetches their data
   useEffect(() => {
