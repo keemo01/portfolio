@@ -310,17 +310,27 @@ def portfolio(request):
         api_keys = APIKey.objects.get(user=user)
         has_binance = bool(api_keys.binance_api_key and api_keys.binance_secret_key)
         has_bybit = bool(api_keys.bybit_api_key and api_keys.bybit_secret_key)
+        
+        # Check if user has any API keys or holdings
         if not (has_binance or has_bybit) and not PortfolioHolding.objects.filter(user=user).exists():
             return Response({
                 'detail': 'No API keys or manual holdings',
-                'portfolio': [], 'total_value': 0, 'errors': None
+                'portfolio': [],
+                'total_value': 0,
+                'errors': None,
+                'has_api_keys': False,
             }, status=status.HTTP_200_OK)
+
     except APIKey.DoesNotExist:
         api_keys = None
-        if not PortfolioHolding.objects.filter(user=user).exists():
+        # Check if user has any API keys or holdings
+        if not PortfolioHolding.objects.filter(user=user).exists(): 
             return Response({
                 'detail': 'No API keys or manual holdings',
-                'portfolio': [], 'total_value': 0, 'errors': None
+                'portfolio': [],
+                'total_value': 0,
+                'errors': None,
+                'has_api_keys': False,
             }, status=status.HTTP_200_OK)
 
     portfolio_data = []
@@ -377,7 +387,6 @@ def portfolio(request):
 
                 coin = b['asset']
                 if coin.upper() in IGNORE_BINANCE_SYMBOLS:
-                    # skip SNM/SONM
                     continue
 
                 price = price_cache.get(coin) or get_binance_price(coin)
@@ -428,7 +437,7 @@ def portfolio(request):
             'original_value': d['cost']
         })
 
-    # — Consolidate holdings —
+    # — Consolidate holdings and metrics —
     consolidated = aggregate_portfolio_holdings(portfolio_data)
     metrics = calculate_portfolio_metrics(consolidated)
 
@@ -457,7 +466,10 @@ def portfolio(request):
         'total_cost': float(metrics['total_cost']),
         'allocation': metrics['allocation'],
         'exchange_distribution': {k: float(v) for k, v in metrics['exchange_distribution'].items()},
-        'errors': errors or None
+        'errors': errors or None,
+        'has_api_keys': bool(
+            api_keys and (api_keys.binance_api_key or api_keys.bybit_api_key)
+        ),
     }, status=status.HTTP_200_OK)
 
     
