@@ -14,8 +14,6 @@ import UserProfile from './pages/UserProfile/UserProfile';
 import { UserProvider } from './context/UserContext';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import SentimentPage from './pages/Analysis/SentimentPage';
-
 
 const App = () => {
     return (
@@ -33,7 +31,6 @@ const App = () => {
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/profile/:userId" element={<UserProfile />} />
                         <Route path="/portfolio" element={<Portfolio />} />
-                        <Route path="/analysis" element={<SentimentPage />} />
                     </Routes>
                     <Footer />
                 </div>

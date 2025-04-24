@@ -29,7 +29,7 @@ const Login = () => {
       } else if (err.response?.status === 401) {
         setError('Invalid username or password');
       } else {
-        setError('An error occurred during login. Please try again.');
+        setError('An xerror occurred during login. Please try again.');
       }
     }
   };

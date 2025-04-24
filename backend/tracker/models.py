@@ -204,3 +204,31 @@ class Like(models.Model):
 
     def __str__(self):
         return f"{self.user.username} liked '{self.blog.title}'"
+    
+class NewsItem(models.Model):
+    SENTIMENT_CHOICES = [
+        ('positive', 'Positive'),
+        ('negative', 'Negative'),
+    ]
+
+    title = models.CharField(max_length=512)
+    url = models.URLField(max_length=1024, unique=True)
+    timestamp = models.DateTimeField()
+    sentiment_score = models.FloatField(
+        help_text="Normalized score between -1.0 (very negative) and +1.0 (very positive)"
+    )
+    sentiment_label = models.CharField(
+        max_length=8,
+        choices=SENTIMENT_CHOICES,
+        help_text="High-level label derived from sentiment_score"
+    )
+
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['sentiment_label']),
+            models.Index(fields=['-timestamp']),
+        ]
+
+    def __str__(self):
+        return f"[{self.sentiment_label.upper()}] {self.title[:75]}…"

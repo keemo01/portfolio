@@ -1,19 +1,20 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import axios from 'axios';
-import { useUser } from '../../context/UserContext';
 import { Container, Card, Row, Col, Alert, Spinner, Modal, Form, Button, Badge, ButtonGroup } from 'react-bootstrap';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { FaCoins, FaExchangeAlt, FaWallet } from 'react-icons/fa';
+import { useUser } from '../../context/UserContext';
+import { useNavigate, Link } from 'react-router-dom';
 import PortfolioChart from '../../components/Chart/PortfolioChart';
 import AssetAllocationChart from '../../components/Chart/AssetAllocationChart';
+import RiskMetricsCard from '../../components/Metrics/RiskMetricsCard';
 import './Portfolio.css';
+import axios from 'axios';
 
 const Portfolio = () => {
   const { user } = useUser();
   const navigate = useNavigate();
   const token = localStorage.getItem('access_token');
 
-  // Validate token and redirect if expired.
+  // Validate token and redirect to login if invalid.
   const validateToken = useCallback(() => {
     if (!token) {
       navigate('/login');
@@ -40,7 +41,7 @@ const Portfolio = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // API keys modal state.
+  // API keys variables
   const [showApiModal, setShowApiModal] = useState(false);
   const [apiKeys, setApiKeys] = useState({
     binance_api_key: '',
@@ -48,11 +49,14 @@ const Portfolio = () => {
     bybit_api_key: '',
     bybit_secret_key: ''
   });
+
+  // API keys status
+  // This state is used to check if the API keys are already set
   const [apiKeyStatus, setApiKeyStatus] = useState({ binance: false, bybit: false });
   const [savingKeys, setSavingKeys] = useState(false);
   const [apiError, setApiError] = useState(null);
   
-  // Historical chart and coin filter state.
+  // Historical data for charts
   const [historicalData, setHistoricalData] = useState([]);
   const [selectedCoin, setSelectedCoin] = useState("Combined");
 
@@ -119,7 +123,7 @@ const Portfolio = () => {
     }
   }, [token, navigate, validateToken]);
 
-  // Fetch API keys status.
+  // Fetch API keys status
   const fetchApiKeysStatus = useCallback(async () => {
     if (!validateToken()) return;
     try {
@@ -144,7 +148,7 @@ const Portfolio = () => {
     }
   }, [token, navigate, validateToken]);
 
-  // Fetch historical data for the chart.
+  // Fetch historical data for charts
   const fetchHistoricalData = useCallback(async (days = 30, coin = null) => {
     if (!validateToken()) return;
     try {
@@ -184,10 +188,10 @@ const Portfolio = () => {
     }
   }, [validateToken, fetchPortfolioData, fetchApiKeysStatus]);
 
-  // When the selected coin changes, refetch historical data.
+  // Fetch historical data when the component mounts or when selectedCoin changes
   useEffect(() => {
     if (validateToken() && selectedCoin) {
-      // The 'days' parameter will determine which snapshot type is returned by the backend.
+      // The 'days' parameter will determine which snapshot type is returned by the backend
       fetchHistoricalData(30, selectedCoin === "Combined" ? null : selectedCoin);
     }
   }, [validateToken, fetchHistoricalData, selectedCoin]);
@@ -229,7 +233,7 @@ const Portfolio = () => {
     }
   };
 
-  // Handle removal of API keys.
+  // Handle API keys removal
   const handleRemoveApiKeys = async (exchange) => {
     if (!validateToken()) return;
     setSavingKeys(true);
@@ -253,7 +257,7 @@ const Portfolio = () => {
           [`${exchange}_secret_key`]: ''
         }));
         
-        // Refresh portfolio and historical data.
+        // Refetch portfolio data and API keys status
         await fetchPortfolioData();
         await fetchHistoricalData(30, selectedCoin === "Combined" ? null : selectedCoin);
         setShowApiModal(false);
@@ -269,7 +273,7 @@ const Portfolio = () => {
     }
   };
 
-  // Get coin icon with a fallback.
+  // Function to get coin icon URL or fallback SVG
   const getCoinIcon = (symbol) => {
     if (!symbol) return null;
     const fallbackIcon = `data:image/svg+xml,${encodeURIComponent(`
@@ -286,16 +290,35 @@ const Portfolio = () => {
     };
   };
 
+  // Calculate total value of the portfolio
   const sortedPortfolioData = useMemo(() => {
     return [...portfolioData].sort((a, b) => parseFloat(b.current_value) - parseFloat(a.current_value));
   }, [portfolioData]);
 
-  // Extract unique coin list for filter buttons.
+  // Extract unique coin list for filter buttons
   const uniqueCoins = useMemo(() => {
     const coins = new Set();
     sortedPortfolioData.forEach(holding => coins.add(holding.coin));
     return Array.from(coins);
   }, [sortedPortfolioData]);
+
+  // Compute risk metrics (volatility and Sharpe)
+  const riskMetrics = useMemo(() => {
+    if (!historicalData || historicalData.length < 2) return { volatility: 0, sharpe: 0 };
+    // calculate daily returns
+    const returns = [];
+    for (let i = 1; i < historicalData.length; i++) {
+      const prev = historicalData[i - 1].value;
+      const curr = historicalData[i].value;
+      returns.push((curr - prev) / prev);
+    }
+    // calculate mean and standard deviation
+    const mean = returns.reduce((sum, r) => sum + r, 0) / returns.length;
+    const variance = returns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / (returns.length - 1);
+    const volatility = Math.sqrt(variance);
+    const sharpe = volatility > 0 ? mean / volatility * Math.sqrt(252) : 0; // Calculated assuming 252 trading days
+    return { volatility, sharpe };
+  }, [historicalData]);
 
   if (!user) return null;
 
@@ -308,10 +331,6 @@ const Portfolio = () => {
             <div className="detail-row">
               <span>Total Value:</span>
               <span className="value">${formatNumber(totalValue)}</span>
-            </div>
-            <div className="detail-row">
-              <span>Total Cost:</span>
-              <span className="value">${formatNumber(portfolioMetrics.total_cost)}</span>
             </div>
           </Card.Body>
         </Card>
@@ -342,13 +361,13 @@ const Portfolio = () => {
           <FaWallet className="me-2" /> Crypto Portfolio
         </h1>
         <div className="header-actions">
-          {!loading && !error && portfolioData.length > 0 && (
-            <Card className="total-value-card">
-              <Card.Body>
-                <h3>Total Value: ${formatNumber(totalValue)}</h3>
-              </Card.Body>
-            </Card>
-          )}
+        {!loading && !error && portfolioData.length > 0 && (
+          <Card className="total-value-card">
+            <Card.Body>
+              <h3>Total Value: ${formatNumber(totalValue)}</h3>
+            </Card.Body>
+          </Card>
+        )}
           <Button variant="outline-primary" onClick={() => setShowApiModal(true)}>
             <FaExchangeAlt className="me-2" /> Configure API Keys
           </Button>
@@ -358,6 +377,13 @@ const Portfolio = () => {
       {(!loading && !error && portfolioData.length > 0) && (
         <>
           <PortfolioMetrics />
+
+          <Row className="mb-4">
+            <Col md={6} lg={4}>
+              <RiskMetricsCard metrics={riskMetrics} />
+            </Col>
+          </Row>
+
           <div className="coin-filter">
             <ButtonGroup>
               <Button 

@@ -55,7 +55,6 @@ import { Dropdown } from 'react-bootstrap';
           {!user && <li><Link to="/features">Features</Link></li>}
           {user && (
             <>
-              <li><Link to="/analysis">Analysis</Link></li>
               <li><Link to="/blog">Blog</Link></li>
             </>
           )}
