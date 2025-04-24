@@ -19,8 +19,9 @@ from pathlib import Path
 import os
 from venv import logger
 from cryptography.fernet import Fernet
-
+from celery.schedules import crontab
 from dotenv import load_dotenv
+from django.utils import timezone
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -124,6 +125,28 @@ if not ENCRYPTION_KEY:
     # Generate a key if not exists
     ENCRYPTION_KEY = Fernet.generate_key().decode()
     logger.warning("Generated new encryption key - make sure to save this in your .env file")
+    
+
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "UTC"
+
+
+CELERY_BEAT_SCHEDULE = {
+    'portfolio-hourly-snapshot': {
+        'task': 'tracker.tasks.update_portfolio_snapshot',
+        'schedule': 360.0,
+        'args': ('hourly',)
+    },
+    'portfolio-daily-snapshot': {
+        'task': 'tracker.tasks.update_portfolio_snapshot',
+        'schedule': crontab(hour=0, minute=0),
+        'args': ('daily',)
+    },
+}
 
 # Ensure key is properly formatted
 try:

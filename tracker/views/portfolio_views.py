@@ -29,39 +29,51 @@ SYMBOL_OVERRIDES = {
 # These are not tradable on Binance
 IGNORE_BINANCE_SYMBOLS = {'SNM', 'SONM'} 
 
+MAX_ATTEMPTS = 5 # Maximum attempts to fetch data
+BASE_SLEEP = 3  # Sleep time in seconds
+
 def get_binance_price(coin):
     """
-    Return the USDT price for `coin`.
-    - USDT → 1.0
-    - Applies SYMBOL_OVERRIDES
-    - Returns float price or None
+    Return the USDT price for `coin`, retrying on timeouts.
     """
     uc = coin.upper()
     if uc == 'USDT':
         return 1.0
-
     if uc in IGNORE_BINANCE_SYMBOLS:
-        # SNM/SONM aren't tradable on Binance
         return None
 
     symbol = SYMBOL_OVERRIDES.get(uc, uc)
     pair = f"{symbol}USDT"
-    try:
-        resp = binance_session.get(
-            "https://api.binance.com/api/v3/ticker/price",
-            params={'symbol': pair},
-            timeout=5
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return float(data['price'])
-    except Exception as e:
-        logger.warning("Binance: no price for %s (tried %s): %s", coin, pair, e)
-        return None
+
+    for attempt in range(1, MAX_ATTEMPTS+1):
+        try:
+            resp = binance_session.get(
+                "https://api.binance.com/api/v3/ticker/price",
+                params={'symbol': pair},
+                timeout=5
+            )
+            resp.raise_for_status()
+            return float(resp.json()['price'])
+        except (requests.ReadTimeout, requests.ConnectTimeout) as e:
+            # Timeout occurred while waiting a bit before trying again
+            wait = BASE_SLEEP * (2 ** (attempt-1))
+            logger.warning(
+                "Timeout fetching %s (attempt %d/%d): %s – retrying in %ds",
+                pair, attempt, MAX_ATTEMPTS, e, wait
+            )
+            time.sleep(wait)
+        except Exception as e:
+            # any other Errors: log and stop retrying
+            logger.error("Error fetching %s: %s", pair, e)
+            break
+
+    # if all attempts fail
+    logger.warning("Binance: no price for %s after %d attempts", coin, MAX_ATTEMPTS)
+    return None
 
 def get_bybit_price(coin):
     """
-    Fetch the current price for a coin from Bybit's V5 API.
+    Fetch the current price for a coin from Bybit's V5 API, retrying on timeouts.
     USDT is always $1.0.
     """
     if coin.upper() == 'USDT':
@@ -69,21 +81,45 @@ def get_bybit_price(coin):
 
     url = "https://api.bybit.com/v5/market/tickers"
     params = {"category": "spot", "symbol": f"{coin}USDT"}
-    try:
-        logger.info("Fetching Bybit price for %s with params: %s", coin, params)
-        # Using session to make the request 
-        response = session.get(url, params=params, timeout=5) 
-        if response.status_code == 200:
-            data = response.json()
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            logger.info("Fetching Bybit price for %s (attempt %d/%d) with params: %s",
+                        coin, attempt, MAX_ATTEMPTS, params)
+            response = session.get(url, params=params, timeout=5)
+
+            # Check for HTTP errors
+            if response.status_code != 200:
+                logger.warning("Bybit returned status %d for %s, aborting retries",
+                               response.status_code, coin)
+                return None
+
+            data = response.json() # Check for JSON errors
             if data.get("retCode") == 0 and data.get("result", {}).get("list"):
                 price = float(data["result"]["list"][0]["lastPrice"])
                 logger.info("Found price for %s: $%s", coin, price)
                 return price
-        logger.warning("No price data found for %s.", coin)
-        return None
-    except Exception as e:
-        logger.error("Error fetching Bybit price for %s: %s", coin, e)
-        return None
+
+            logger.warning("No price data found for %s (retCode=%s)", coin, data.get("retCode"))
+            return None
+
+        except (requests.ReadTimeout, requests.ConnectTimeout) as e:
+            # Timeout occurred waiting a bit before trying again
+            wait = BASE_SLEEP * (2 ** (attempt - 1))
+            logger.warning(
+                "Timeout fetching %s (attempt %d/%d): %s — retrying in %ds",
+                coin, attempt, MAX_ATTEMPTS, e, wait
+            )
+            time.sleep(wait)
+
+        except Exception as e:
+            # any other Errors: log and stop retrying
+            logger.error("Error fetching Bybit price for %s: %s", coin, e)
+            return None
+
+    # if all attempts fail
+    logger.warning("Bybit: no price for %s after %d attempts", coin, MAX_ATTEMPTS)
+    return None
 
 def get_bybit_holdings(api_key, secret_key):
     """
@@ -174,7 +210,7 @@ def get_bybit_cost_basis(api_key, secret_key, coin, amount):
     try:
         cost_endpoint = "/v5/position/info"
         cost_params = {
-            "category": "linear",  # Changed from Spot as  Bybit doesn't support cost basis for Spot
+            "category": "linear",  # Changed from Spot to Linear as Bybit doesn't support cost basis for Spot
             "symbol": f"{coin}USDT"
         }
         
@@ -261,10 +297,12 @@ def fetch_user_holdings(user):
     # Bybit API keys
     keys = APIKey.objects.filter(user=user).first()
 
-    # Bybit
+    # — Bybit holdings —
     if keys and keys.bybit_api_key and keys.bybit_secret_key:
         try:
             for h in get_bybit_holdings(keys.bybit_api_key, keys.bybit_secret_key):
+                # mark exchange on each holding
+                h['exchange'] = 'Bybit'
                 price = get_bybit_price(h["coin"])
                 if price is None:
                     errors.append(f"No price for {h['coin']} on Bybit")
@@ -274,26 +312,75 @@ def fetch_user_holdings(user):
                 combined.append(h)
         except Exception as e:
             errors.append(f"Bybit fetch error: {e}")
-    
 
-    # Manual holdings
+    # — Binance holdings —
+    if keys and keys.binance_api_key and keys.binance_secret_key:
+        try:
+            from requests import Session
+            session = Session()
+            ts = str(int(time.time() * 1000))
+            params = {'timestamp': ts, 'recvWindow': 5000}
+            query = urlencode(params)
+            signature = hmac.new(
+                keys.binance_secret_key.encode(),
+                query.encode(),
+                hashlib.sha256
+            ).hexdigest()
+            params['signature'] = signature
+            headers = {'X-MBX-APIKEY': keys.binance_api_key}
+            resp = session.get(
+                'https://api.binance.com/api/v3/account',
+                params=params, headers=headers, timeout=10
+            )
+            resp.raise_for_status()
+            for b in resp.json().get('balances', []):
+                free, locked = float(b['free']), float(b['locked'])
+                amt = free + locked
+                if amt <= 0:
+                    continue
+                coin = b['asset']
+                price = get_binance_price(coin)
+                if price is None:
+                    errors.append(f"No price for {coin} on Binance")
+                    continue
+                combined.append({
+                    'exchange': 'Binance',
+                    'account_type': 'Spot',
+                    'coin': coin,
+                    'amount': amt,
+                    'transferable': free,
+                    'original_value': None,
+                    'current_price': price,
+                    'current_value': amt * price
+                })
+        except Exception as e:
+            errors.append(f"Binance fetch error: {e}")
+
+    # — Manual holdings —
     for m in PortfolioHolding.objects.filter(user=user):
         coin = m.coin.upper()
-        price = get_bybit_price(coin) 
+        price = get_bybit_price(coin) or get_binance_price(coin)
         if price is None:
             errors.append(f"No price for manual {coin}")
             continue
         amt = Decimal(str(m.amount))
         combined.append({
-            "exchange": "Manual",
-            "account_type": "Manual",
-            "coin": coin,
-            "amount": float(amt),
-            "transferable": float(amt),
-            "original_value": amt * Decimal(str(m.purchase_price)),
-            "current_price": price,
-            "current_value": amt * Decimal(str(price))
+            'exchange': 'Manual',
+            'account_type': 'Manual',
+            'coin': coin,
+            'amount': float(amt),
+            'transferable': float(amt),
+            'original_value': amt * Decimal(str(m.purchase_price)),
+            'current_price': price,
+            'current_value': amt * Decimal(str(price))
         })
+
+    # — Consolidate and compute metrics —
+    consolidated = aggregate_portfolio_holdings(combined)
+    metrics = calculate_portfolio_metrics(consolidated)
+
+    # Return the data so the caller can unpack it
+    return consolidated, metrics, errors
 
 @api_view(['GET', 'POST'])
 @authentication_classes([JWTAuthentication])
@@ -482,47 +569,48 @@ def portfolio_history(request):
     Returns historical data for either total portfolio value or specific coin value.
     """
     user = request.user
+    # parse days, default to 30
     try:
         days = int(request.query_params.get('days', 30))
         if days <= 0:
             days = 30
-    except ValueError:
+    except (TypeError, ValueError):
         days = 30
 
-    # Validate coin parameter
     coin = request.query_params.get('coin')
     if coin:
         coin = coin.upper()
 
     start_date = timezone.now() - timedelta(days=days)
 
-    # Fetch history in time window
+    # fetch history records
     histories = PortfolioHistory.objects.filter(
         user=user,
         timestamp__gte=start_date
     ).order_by('timestamp')
 
-    history_data = []
-
-    # Determine current exchanges
-    # Check if user has API keys for exchanges
+    # determine user's current exchanges
     current_exchanges = set()
-    if hasattr(user, 'api_keys'):
-        if user.api_keys.binance_api_key:
+    try:
+        api_keys = user.api_keys
+    except Exception:
+        api_keys = None
+
+    if api_keys:
+        if hasattr(api_keys, 'binance_api_key') and api_keys.binance_api_key:
             current_exchanges.add('binance')
-        if user.api_keys.bybit_api_key:
+        if hasattr(api_keys, 'bybit_api_key') and api_keys.bybit_api_key:
             current_exchanges.add('bybit')
-    # Mark as manual if no API keys are present
     if not current_exchanges:
         current_exchanges.add('manual')
 
-    # Filter records to only those matching current_exchanges
+    history_data = []
     for record in histories:
         try:
-            record_exchanges = set(record.active_exchanges or [])
-            if record_exchanges == current_exchanges:
+            rec_ex = set(record.active_exchanges or [])
+            if rec_ex == current_exchanges:
                 if coin:
-                    value = float((record.coin_values or {}).get(coin, 0))
+                    value = float(record.coin_values.get(coin, 0))
                 else:
                     value = float(record.total_value)
                 history_data.append({
@@ -530,9 +618,7 @@ def portfolio_history(request):
                     'value': value
                 })
         except (TypeError, ValueError) as e:
-            logger.error(f"Error processing history record: {e}")
-            continue
-
+            logger.error(f"Error processing history record for user {user.id}: {e}")
     return Response({'history': history_data}, status=status.HTTP_200_OK)
 
 
@@ -699,10 +785,10 @@ def manage_api_keys(request):
             logger.error("Error managing API keys: %s", e)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
     else:  # GET request
-        # Return current API key status
+        # Retrieve API key status
         try:
             api_keys = APIKey.objects.get(user=request.user)
-            #  Add active_exchanges to response
+            #  Check if user has any API keys or holdings
             active_exchanges = []
             if api_keys.binance_api_key:
                 active_exchanges.append('binance')
