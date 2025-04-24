@@ -36,7 +36,7 @@ const Navbar = () => {
         <nav className="navbar">
             <div className="navbar-container">
                 <Link to="/" className="navbar-logo">
-                    Cryptonia
+                    TradeSync
                 </Link>
                 <div className="navbar-links">
                     <Link to="/blog" className="navbar-link">Blog</Link>

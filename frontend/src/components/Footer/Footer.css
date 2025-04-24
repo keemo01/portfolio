@@ -6,7 +6,6 @@
     width: 100%;
     height: 50px; /* Explicit height */
     position: relative; /* Change to relative */
-    /* rest of your existing styles */
 }
 
 .page-container {

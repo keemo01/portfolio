@@ -138,7 +138,7 @@ CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULE = {
     'portfolio-hourly-snapshot': {
         'task': 'tracker.tasks.update_portfolio_snapshot',
-        'schedule': 360.0,
+        'schedule': 43200.0,
         'args': ('hourly',)
     },
     'portfolio-daily-snapshot': {

@@ -41,26 +41,19 @@ import { Dropdown } from 'react-bootstrap';
         <FaUser className="profile-icon" />
       </button>
     ));
-
+  
     return (
-      // Navbar component
       <nav className="navbar" role="navigation" aria-label="Main navigation">
         <Link to="/" className="navbar-logo" aria-label="Home">
           <img src={logo} alt="App logo" />
         </Link>
-
+  
         <ul className="navbar-links">
           <li><Link to="/">Home</Link></li>
-          <li><Link to="/how-it-works">How It Works</Link></li>
-          {!user && <li><Link to="/features">Features</Link></li>}
-          {user && (
-            <>
-              <li><Link to="/blog">Blog</Link></li>
-            </>
-          )}
-          {!user && <li><Link to="/contact">Contact</Link></li>}
+          <li><Link to="/features">Features</Link></li>
+          {user && <li><Link to="/blog">Blog</Link></li>}
         </ul>
-
+  
         <div className="navbar-cta">
           <label htmlFor="currency-select" className="visually-hidden">
             Select currency
@@ -71,13 +64,13 @@ import { Dropdown } from 'react-bootstrap';
             defaultValue="usd"
             aria-label="Currency"
           >
-            {Object.keys(symbolMap).map((code) => (
+            {Object.keys(symbolMap).map(code => (
               <option key={code} value={code}>
                 {code.toUpperCase()}
               </option>
             ))}
           </select>
-
+  
           {user ? (
             <div className="user-menu">
               <span className="welcome">Hi, {user.username}</span>
@@ -103,7 +96,7 @@ import { Dropdown } from 'react-bootstrap';
           )}
         </div>
       </nav>
-  );
-}
-
-export default Navbar;
+    );
+  };
+  
+  export default Navbar;

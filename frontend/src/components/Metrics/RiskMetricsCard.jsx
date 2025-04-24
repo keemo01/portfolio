@@ -3,7 +3,7 @@ import { Card, Row, Col } from 'react-bootstrap';
 import { FaChartLine } from 'react-icons/fa';
 
 const RiskMetricsCard = ({ metrics }) => {
-  // Provide safe defaults if metrics.volatility or metrics.sharpe are missing
+  // Provide safe defaults if volatility or sharpe are missing
   const volatility = typeof metrics?.volatility === 'number' ? metrics.volatility : 0;
   const sharpe    = typeof metrics?.sharpe     === 'number' ? metrics.sharpe     : 0;
 

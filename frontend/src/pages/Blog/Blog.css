@@ -218,7 +218,26 @@
     border-radius: 12px;
     font-size: 0.8rem;
   }
+  .blog-media-item {
+    margin-bottom: 1rem;
+    position: relative;
+  }
   
+  /* download button styling */
+  .download-media-button {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    background-color: #4a90e2;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .download-media-button:hover {
+    background-color: #4178c0;
+  }
   /* ==========================================================================
      Action Bar
      Styles for action buttons (like, retweet, comment) in posts and tweets

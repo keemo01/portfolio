@@ -1,0 +1,122 @@
+/* break out to full viewport width & dark background */
+.how-it-works.full-page {
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    width: 100vw;
+    background: linear-gradient(180deg, #0f1015 0%, #181a1f 100%);
+    padding: 4rem 1rem;
+    box-sizing: border-box;
+    min-height: 100vh;
+  }
+  
+  /* constrain inner content again */
+  .hiw-inner {
+    max-width: 1000px;
+    margin: 0 auto;
+    color: #fff;
+  }
+  
+  .hiw-hero {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  .hiw-hero h1 {
+    font-size: 2.75rem;
+    margin-bottom: .5rem;
+  }
+  .hiw-hero p {
+    color: #aaa;
+    font-size: 1.1rem;
+  }
+  
+  /* timeline line */
+  .hiw-timeline {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 3rem;
+  }
+  .hiw-timeline::before {
+    content: '';
+    position: absolute;
+    top: 20px; bottom: 20px;
+    left: 50%;
+    width: 4px;
+    background: #2a2c33;
+    transform: translateX(-50%);
+    z-index: 0;
+  }
+  
+  /* step cards */
+  .step-card {
+    position: relative;
+    background: #1f2026;
+    border-radius: 8px;
+    padding: 2rem 1.5rem 1.5rem;
+    width: 300px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+    transition: transform .2s, background .3s;
+    z-index: 1;
+  }
+  .step-card:hover {
+    transform: translateY(-8px);
+    background: #2a2c33;
+  }
+  
+  /* numbered circles */
+  .step-number {
+    position: absolute;
+    top: -16px; left: calc(50% - 16px);
+    width: 32px; height: 32px;
+    background: #a78bfa; color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+  
+  /* icons */
+  .step-icon {
+    font-size: 2rem;
+    color: #a78bfa;
+    margin-bottom: 1rem;
+  }
+  
+  /* titles & text */
+  .step-card h3 {
+    color: #e0e0e0; margin-bottom: .75rem; font-size: 1.25rem;
+  }
+  .step-card p {
+    color: #ccc; font-size: .95rem; line-height: 1.5; text-align: left;
+  }
+  
+  /* CTA */
+  .hiw-cta { text-align: center; }
+  .hiw-cta .btn-gradient {
+    background: linear-gradient(90deg,#7c3aed,#a78bfa);
+    color: #fff;
+    padding: .75rem 2rem;
+    border-radius: 30px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: transform .2s, opacity .3s;
+  }
+  .hiw-cta .btn-gradient:hover {
+    opacity: .9; transform: scale(1.05);
+  }
+
+  
+  
+  /* mobile stack */
+  @media (max-width:768px) {
+    .hiw-timeline { flex-direction: column; align-items: center; }
+    .hiw-timeline::before { left:20px; height:100%; }
+    .step-card { width:100%; max-width:350px; margin-bottom:2rem; padding-top:2.5rem; }
+    .step-number { left:-16px; top:20px; }
+  }
+  

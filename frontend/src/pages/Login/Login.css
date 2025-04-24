@@ -17,14 +17,14 @@
 html, body {
   height: 100%;
   margin: 0;
-  font-family: var(--font-family); /* Use the defined font family */
+  font-family: var(--font-family);
   color: #333;
   background: #f5f5f5;
 }
 
 .login {
   display: flex;
-  flex-direction: column; /* Stack elements vertically */
+  flex-direction: column;
   align-items: center;
   justify-content: center; /* Center content */
   min-height: 100vh;
@@ -101,6 +101,20 @@ html, body {
   font-size: 0.875rem;
   margin-top: 0.5rem; /* Space above error message */
 }
+
+.forgot-container {
+  margin-top: 0.5rem;
+  text-align: center;
+}
+.forgot-link {
+  color: #fff;
+  font-size: 0.9rem;
+  text-decoration: underline;
+}
+.forgot-link:hover {
+  color: var(--color-primary-light);
+}
+
 
 /* Subtle fade-in animation */
 @keyframes fadeIn {

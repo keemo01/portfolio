@@ -134,3 +134,4 @@ class NewsItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = NewsItem
         fields = ['id', 'title', 'url', 'timestamp', 'sentiment_score', 'sentiment_label']
+        

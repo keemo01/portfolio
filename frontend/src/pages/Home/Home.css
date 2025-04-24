@@ -204,6 +204,83 @@ table-layout div {
   background: transparent !important;
 }
 
+/* — Features section — */
+.features-section {
+  background: transparent;      /* page background stays dark */
+  padding: 3rem 0;
+}
+
+.features-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.features-container h2 {
+  color: #fff;
+  font-size: 2rem;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+/* row of three cards */
+.features-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+/* each card */
+.feature-card {
+  background: linear-gradient(135deg, #2a2c33, #3a3c43);
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  flex: 1 1 calc(33% - 1rem);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  text-align: center;
+  transition: transform 0.2s, background 0.3s;
+}
+
+.feature-card:hover {
+  transform: translateY(-6px);
+  background: linear-gradient(135deg, #33354a, #4a3a5c);
+}
+
+/* icon */
+.feature-icon {
+  font-size: 2.5rem;
+  color: #a78bfa;  /* violet-400 */
+  margin-bottom: 0.75rem;
+}
+
+/* title */
+.feature-title {
+  color: #e0e0e0;
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+/* description */
+.feature-desc {
+  color: #bbb;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+/* mobile: stack cards */
+@media (max-width: 768px) {
+  .features-row {
+    flex-direction: column;
+    align-items: center;
+  }
+  .feature-card {
+    flex: 1 1 100%;
+  }
+}
+
+
+
+
 /* Responsive */
 @media (max-width: 768px) {
   .hero {
