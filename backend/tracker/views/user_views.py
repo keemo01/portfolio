@@ -18,8 +18,6 @@ from tracker.models import Blog, Bookmark
 from tracker.serializers import BlogSerializer, UserSerializer
 
 
-
-
 class CustomTokenObtainPairView(TokenObtainPairView):
     """Handles user login and JWT issuance"""
     permission_classes = (AllowAny,)
