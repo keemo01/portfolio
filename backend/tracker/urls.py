@@ -4,6 +4,7 @@ from django.conf.urls.static import static
 
 from rest_framework_simplejwt.views import TokenVerifyView
 
+
 from .views.user_views import (
     signup,
     CustomTokenObtainPairView,
@@ -15,6 +16,8 @@ from . import views
 
 
 urlpatterns = [
+    
+    
     # Authentication
     path('auth/signup/', signup, name='signup'), # User registration
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'), # User login

@@ -11,13 +11,12 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 import pymysql
+import os
 pymysql.install_as_MySQLdb()
 
 from datetime import timedelta
 from pathlib import Path
-import dj_database_url
 
-import os
 from venv import logger
 from cryptography.fernet import Fernet
 from celery.schedules import crontab
@@ -35,17 +34,14 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
+# keep the secret key used in production secret!
+SECRET_KEY = "django-insecure-1*iy9qf5otbk9t@w8fy@c&_$5sl$ean46*feqb4nf%u6zd-5y3"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DJANGO_DEBUG", "") == "True"
+DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',')
+# For Locally ALLOWED_HOSTS += ['localhost', '127.0.0.1']
 
-ALLOWED_HOSTS = [
-     ".herokuapp.com",
-     "cryptonia.io",
-     "www.cryptonia.io",
- ]
 
 # Application definition
 
@@ -76,8 +72,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 REST_FRAMEWORK = {  
@@ -210,13 +206,7 @@ SILENCED_SYSTEM_CHECKS = ['mysql.E001']
 STATICFILES_DIRS = [
     BASE_DIR / "frontend/build/static",
 ]
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
-prod_db = dj_database_url.config(conn_max_age=600, ssl_require=True)
-if prod_db:
-    DATABASES["default"].update(prod_db)
 
 
 # Password validation
@@ -267,6 +257,9 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
     BASE_DIR / "frontend/build/static",
 ]
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
