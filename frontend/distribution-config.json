@@ -1,0 +1,33 @@
+{
+    "CallerReference": "cryptonia-frontend-$(date +%s)",
+    "Aliases": { "Quantity": 0, "Items": [] },
+    "DefaultRootObject": "index.html",
+    "Origins": {
+      "Quantity": 1,
+      "Items": [
+        {
+          "Id": "S3-cryptonia-frontend",
+          "DomainName": "cryptonia-frontend.s3.amazonaws.com",
+          "S3OriginConfig": { "OriginAccessIdentity": "" }
+        }
+      ]
+    },
+    "DefaultCacheBehavior": {
+      "TargetOriginId": "S3-cryptonia-frontend",
+      "ViewerProtocolPolicy": "redirect-to-https",
+      "AllowedMethods": {
+        "Quantity": 2,
+        "Items": ["GET","HEAD"],
+        "CachedMethods": { "Quantity": 2, "Items": ["GET","HEAD"] }
+      },
+      "ForwardedValues": {
+        "QueryString": false,
+        "Cookies": { "Forward": "none" }
+      },
+      "MinTTL": 0,
+      "TrustedSigners": { "Enabled": false, "Quantity": 0 }
+    },
+    "Comment": "Cryptonia frontend distribution",
+    "Enabled": true
+  }
+  
