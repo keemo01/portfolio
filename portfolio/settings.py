@@ -154,6 +154,9 @@ heroku_url = os.getenv('JAWSDB_URL')
 if heroku_url:
     parsed = dj_database_url.parse(heroku_url, conn_max_age=600, ssl_require=True)
     DATABASES['default'].update(parsed)
+    # Removed sslmode for MySQL compatibility
+    if DATABASES['default']['ENGINE'].endswith('mysql'):
+        DATABASES['default']['OPTIONS'].pop('sslmode', None)
 
 # CACHING
 CACHES = {
