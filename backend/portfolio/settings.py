@@ -140,21 +140,11 @@ CELERY_BEAT_SCHEDULE = {
 
 # DATABASE
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'crypto_portfolio',
-        'USER': 'crypto_user',
-        'PASSWORD': 'Blackboy1',
-        'HOST': 'localhost',
-        'PORT': '3306',
-        'CONN_MAX_AGE': 600,
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            'charset': 'utf8mb4',
-            'use_unicode': True,
-            'autocommit': True,
-        },
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('JAWSDB_URL'),
+        conn_max_age=600,
+        ssl_require=True,
+    )
 }
 
 # Heroku
