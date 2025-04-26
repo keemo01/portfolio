@@ -20,7 +20,11 @@ from tracker.serializers import BlogSerializer, BookmarkSerializer, CommentSeria
 @permission_classes([IsAuthenticated])
 def get_blogs(request):
     blogs = Blog.objects.all().order_by('-created_at')
-    serializer = BlogSerializer(blogs, many=True, context={'request': request})  # Pass request
+    serializer = BlogSerializer(
+        blogs,
+        many=True,
+        context={'request': request}
+    )
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
@@ -29,7 +33,10 @@ def get_blogs(request):
 def blog_detail(request, pk):
     try:
         blog = Blog.objects.get(pk=pk)
-        serializer = BlogSerializer(blog, context={'request': request})
+        serializer = BlogSerializer(
+            blog, 
+            context={'request': request}
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Blog.DoesNotExist:
         return Response({'detail': 'Blog not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -43,7 +50,8 @@ def create_blog(request):
     Allows authenticated users to create a new blog with images/videos.
     """
     data = request.data
-    blog_serializer = BlogSerializer(data=data)
+    blog_serializer = BlogSerializer(data=data, context={'request': request})
+    # Check if the user is authenticated
     
     if blog_serializer.is_valid():
         blog = blog_serializer.save(author=request.user)
