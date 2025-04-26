@@ -19,6 +19,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load .env before any os.getenv() calls
 load_dotenv()
 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "portfolio.settings")
+
 # SECURITY
 SECRET_KEY = os.getenv(
     'SECRET_KEY',
@@ -62,7 +64,9 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
-ROOT_URLCONF = 'portfolio.urls'
+CORS_ALLOW_ALL_HEADERS = True
+
+ROOT_URLCONF = 'tracker.urls'
 
 TEMPLATES = [
     {
@@ -80,8 +84,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'portfolio.wsgi.application'
-ASGI_APPLICATION = 'portfolio.asgi.application'
+WSGI_APPLICATION = 'tracker.wsgi.application'
+ASGI_APPLICATION = 'tracker.asgi.application'
 
 # CHANNELS
 CHANNEL_LAYERS = {
