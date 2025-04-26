@@ -1,7 +1,7 @@
 import React, { createContext, useEffect, useState, useCallback } from 'react';
 
 
-const API_URL = process.env.REACT_APP_API_URL;
+const CG_URL  = process.env.REACT_APP_CG_URL;
 
 // Create the context
 export const CoinContext = createContext();
@@ -32,8 +32,8 @@ const CoinContextProvider = (props) => {
 
     try {
       const res = await fetch(
-        `${API_URL}/api/v3/coins/markets?vs_currency=${currency.name}`,
-        options
+        `${CG_URL}/coins/markets?vs_currency=${currency.name}`
+        , options
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
