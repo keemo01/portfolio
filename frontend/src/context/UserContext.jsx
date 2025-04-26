@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react'
 import axios from 'axios'
 
-const BASE_URL = 'http://127.0.0.1:8000/api/auth'
+const BASE_URL = `${process.env.REACT_APP_API_URL}/api/auth`
 
 export const UserContext = createContext({
   user: null,
