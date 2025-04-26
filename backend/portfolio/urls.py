@@ -14,12 +14,14 @@ def home(request):
 urlpatterns = [
     path('', home, name='home'),                    
     path('admin/', admin.site.urls),                
-    path('api/v3/', include('tracker.urls')),         
+    path('api/', include('tracker.urls')),           
 
     # Authentication at root
-    re_path(r'^login/?$', CustomTokenObtainPairView.as_view(), name='login'),# Login
-    re_path(r'^signup/?$', views.signup, name='signup'),# User registration
-    re_path(r'^test_token/?$', views.test_token, name='test_token'),# Test token
+    path('auth/', include([
+        re_path(r'^login/?$',       CustomTokenObtainPairView.as_view(), name='login'),
+        re_path(r'^signup/?$',      views.signup,            name='signup'),
+        re_path(r'^test-token/?$',  views.test_token,        name='test_token'),
+    ])),
 
     # Static and media files
     re_path(r'^media/(?P<path>.*)$', serve, {
