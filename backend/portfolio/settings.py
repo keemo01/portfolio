@@ -1,12 +1,14 @@
 import os
 import pymysql
+import dj_database_url
+
 from pathlib import Path
+from corsheaders.defaults import default_headers
 from datetime import timedelta
 from celery.schedules import crontab
 from cryptography.fernet import Fernet
 from venv import logger
 from dotenv import load_dotenv
-import dj_database_url
 
 # Use PyMySQL as MySQLdb
 pymysql.install_as_MySQLdb()
@@ -202,11 +204,15 @@ USE_I18N = True
 USE_TZ = True
 
 # CORS
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://localhost:8080',
+    "https://cryptofront-a256c.web.app",
+    "https://cryptofront-a256c.firebaseapp.com",
+]
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "x-cg-demo-api-key",
 ]
 
 # DEFAULT AUTO FIELD
