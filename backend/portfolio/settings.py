@@ -143,12 +143,18 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
+DATABASE_URL = (
+    os.environ.get('DATABASE_URL') or
+    os.environ.get('JAWSDB_URL')     or
+    os.environ.get('CLEARDB_DATABASE_URL')
+)
+
 # DATABASE
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('JAWSDB_URL'),
+    'default': dj_database_url.parse(
+        DATABASE_URL,
         conn_max_age=600,
-        ssl_require=True,
+        engine='django.db.backends.mysql'
     )
 }
 

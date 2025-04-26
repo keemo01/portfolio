@@ -1,7 +1,7 @@
 BINANCE_API_BASE='https://api.binance.us'
 BINANCE_PUBLIC_BASE='https://api.binance.us'
 DATABASE_URL='mysql://y66afxo8rtx2p7n8:a7sf6pofe4j39lgk@nkpl8b2jg68m87ht.cbetxkdyhwsb.us-east-1.rds.amazonaws.com:3306/gdy612t8q29qmhui'
-DJANGO_ALLOWED_HOSTS=tradebackend-013ea7361a00.herokuapp.com
+DJANGO_ALLOWED_HOSTS=tradesync-e21463441dd1.herokuapp.com
 DJANGO_DEBUG=False
 DJANGO_ENCRYPTION_KEY='FvSbg7T1lmIn8TTPggnGpSVdQHWyOAHMA41RFMM3XNE='
 DJANGO_SECRET_KEY=WB21PGYxGjUa7Sv6UxbikOjo5HxHrE7TKkE-UgGfC9QB2CzUgegQOm4jFkYPgk3dhGY
