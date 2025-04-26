@@ -58,6 +58,8 @@ media/
 venv/
 ENV/
 
+.firebase/
+
 # IDE
 .idea/
 .vscode/
