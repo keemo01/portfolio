@@ -1,1 +1,3 @@
 web: gunicorn portfolio.wsgi
+worker: celery -A portfolio worker --loglevel=info
+beat:   celery -A portfolio beat   --loglevel=info
