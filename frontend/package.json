@@ -38,6 +38,10 @@
       "react-app/jest"
     ]
   },
+  "engines": {
+  "node": "23.x",
+  "npm": "10.x"
+  },
   "browserslist": {
     "production": [
       ">0.2%",
@@ -51,9 +55,9 @@
     ]
   },
   "devDependencies": {
-    "@babel/core": "^7.26.0",
-    "@babel/preset-env": "^7.26.0",
-    "@babel/preset-react": "^7.25.9",
+    "@babel/core": "^7.26.10",
+    "@babel/preset-env": "^7.26.9",
+    "@babel/preset-react": "^7.26.3",
     "babel-loader": "^9.2.1",
     "css-loader": "^7.1.2",
     "html-webpack-plugin": "^5.6.3",
