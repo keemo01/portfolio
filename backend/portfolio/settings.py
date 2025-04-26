@@ -31,8 +31,9 @@ ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',')
 NEWSAPI_KEY = os.environ['NEWSAPI_KEY']
 
 
-BINANCE_PUBLIC_BASE = os.getenv("BINANCE_PUBLIC_BASE", "https://data.binance.com")
-BINANCE_API_BASE    = os.getenv("BINANCE_API_BASE",    "https://api2.binance.com")
+BINANCE_API_BASE    = os.getenv("BINANCE_API_BASE", "https://api.binance.com")
+BINANCE_PUBLIC_BASE = os.getenv("BINANCE_PUBLIC_BASE", "https://api.binance.com")
+
 
 
 # MEDIA
