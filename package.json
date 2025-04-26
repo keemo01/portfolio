@@ -1,9 +1,11 @@
 {
     "name": "cryptonia-monorepo",
     "scripts": {
-        "heroku-postbuild": "cd frontend && npm install && npm run build"
+    "start": "serve -s dist -l $PORT",
+    "heroku-postbuild": "cd frontend && npm install && npm run build && cp -a frontend/dist/. dist/"
     },
     "devDependencies": {
-        "webpack-cli": "^6.0.1"
+        "webpack-cli": "^6.0.1",
+        "serve": "^14.2.4"
     }
 }
