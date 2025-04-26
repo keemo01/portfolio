@@ -1,0 +1,14 @@
+BINANCE_API_BASE='https://api.binance.us'
+BINANCE_PUBLIC_BASE='https://api.binance.us'
+DATABASE_URL='mysql://y66afxo8rtx2p7n8:a7sf6pofe4j39lgk@nkpl8b2jg68m87ht.cbetxkdyhwsb.us-east-1.rds.amazonaws.com:3306/gdy612t8q29qmhui'
+DJANGO_ALLOWED_HOSTS=tradebackend-013ea7361a00.herokuapp.com
+DJANGO_DEBUG=False
+DJANGO_ENCRYPTION_KEY='FvSbg7T1lmIn8TTPggnGpSVdQHWyOAHMA41RFMM3XNE='
+DJANGO_SECRET_KEY=WB21PGYxGjUa7Sv6UxbikOjo5HxHrE7TKkE-UgGfC9QB2CzUgegQOm4jFkYPgk3dhGY
+DJANGO_SETTINGS_MODULE=portfolio.settings
+JAWSDB_CRIMSON_URL='mysql://yyovnnpdplq96m1k:upmn06bty54wjsbf@xefi550t7t6tjn36.cbetxkdyhwsb.us-east-1.rds.amazonaws.com:3306/syzw16lye2np46ph'
+JAWSDB_MARIA_ORANGE_URL='mysql://kfbvzyonem9nt0h2:m543l59e3o0d1kzg@z1ntn1zv0f1qbh8u.cbetxkdyhwsb.us-east-1.rds.amazonaws.com:3306/ppzdupl9pa1c121p'
+JAWSDB_MARIA_URL='mysql://y66afxo8rtx2p7n8:a7sf6pofe4j39lgk@nkpl8b2jg68m87ht.cbetxkdyhwsb.us-east-1.rds.amazonaws.com:3306/gdy612t8q29qmhui'
+JAWSDB_URL='mysql://has8ann2bm217yhs:gyzjmvodtdoy9bst@a5s42n4idx9husyc.cbetxkdyhwsb.us-east-1.rds.amazonaws.com:3306/dblc4n6zfowyuwof'
+NEWSAPI_KEY=7e07333e33234db8ac28e319fd52cdd4
+SECRET_KEY=WB21PGYxGjUa7Sv6UxbikOjo5HxHrE7TKkE-UgGfC9QB2CzUgegQOm4jFkYPgk3dhGY

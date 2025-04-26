@@ -171,8 +171,9 @@ def get_bybit_holdings(api_key, secret_key):
                 if response.status_code == 200:
                     data = response.json()
                     if data.get('retCode') == 0:
-                        for coin_data in data.get('result', {}).get('balance', []):
+                        for coin_data in data.get('result', {}).get('list', []):
                             wallet_balance = float(coin_data.get('walletBalance', '0'))
+                            transferable   = float(coin_data.get('available',      '0'))
                             if wallet_balance > 0:
                                 # Fetch cost basis for the coin
                                 try:
@@ -186,12 +187,12 @@ def get_bybit_holdings(api_key, secret_key):
                                     original_value = None
                                 
                                 all_balances.append({
-                                    'coin': coin_data['coin'],
-                                    'amount': wallet_balance,
-                                    'transferable': float(coin_data.get('transferBalance', '0')),
-                                    'account_type': account["type"],
-                                    'original_value': original_value
-                                })
+                                        'coin':          coin_data['coin'],
+                                        'amount':        wallet_balance,
+                                        'transferable':  transferable,
+                                        'account_type':  account["type"],
+                                        'original_value': original_value
+                                    })
             except Exception as e:
                 logger.error("Error fetching batch %s: %s", i // 10 + 1, e)
                 continue
