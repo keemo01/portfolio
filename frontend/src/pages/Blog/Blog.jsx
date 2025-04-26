@@ -4,8 +4,7 @@ import axios from 'axios';
 import { UserContext } from '../../context/UserContext';
 import './Blog.css';
 
-const BASE_URL = 'http://127.0.0.1:8000/api';
-const NEWS_API_KEY = '7e07333e33234db8ac28e319fd52cdd4';
+const BASE_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 
 
@@ -99,19 +98,8 @@ const Blog = () => {
   // Fetch news articles from NewsAPI
   const fetchNews = async () => {
     try {
-      const response = await axios.get('https://newsapi.org/v2/everything', {
-        params: {
-          apiKey: NEWS_API_KEY,
-          q: 'cryptocurrency OR bitcoin OR crypto',
-          language: 'en',
-          sortBy: 'publishedAt',
-          pageSize: 8,
-        }
-      });
-      setState(prev => ({
-        ...prev,
-        news: response.data?.articles?.slice(0, 10) || []
-      }));
+      const { data } = await axios.get(`${BASE_URL}/news/`);
+      setState(prev => ({ ...prev, news: data }));
     } catch (error) {
       console.error('Error fetching news:', error);
     }

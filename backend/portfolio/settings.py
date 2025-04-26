@@ -28,6 +28,8 @@ SECRET_KEY = os.getenv(
 )
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',')
+NEWSAPI_KEY = os.environ['NEWSAPI_KEY']
+
 
 # MEDIA
 MEDIA_URL = '/media/'

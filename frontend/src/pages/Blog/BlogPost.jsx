@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { UserContext } from '../../context/UserContext';
 import './Blog.css';
+const BASE_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const Comment = ({ comment, onReply, onDelete, currentUser }) => {
   const [showReplyForm, setShowReplyForm] = useState(false);
@@ -134,10 +135,10 @@ const formatDate = (dateString) => {
       try {
         // load post data and its comments in parallel
         const [blogRes, commentsRes] = await Promise.all([
-          axios.get(`http://127.0.0.1:8000/api/blogs/${id}/`, {
+          axios.get(`${BASE_URL}/blogs/${id}/`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get(`http://127.0.0.1:8000/api/blogs/${id}/comments/`, {
+          axios.get(`${BASE_URL}/blogs/${id}/comments/`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -161,7 +162,7 @@ const formatDate = (dateString) => {
     const token = localStorage.getItem('access_token');
     try {
       const res = await axios.post(
-        `http://127.0.0.1:8000/api/blogs/${id}/comments/`,
+        `${BASE_URL}/blogs/${id}/comments/`,
         { content: newComment, blog: id },         // comment payload
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -179,13 +180,13 @@ const handleReply = async (parentId, content) => {
     try {
       // send reply data
       await axios.post(
-        `http://127.0.0.1:8000/api/blogs/${id}/comments/`,
+        `${BASE_URL}/blogs/${id}/comments/`,
         { content, parent: parentId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       // reload comments after reply
       const commentsRes = await axios.get(
-        `http://127.0.0.1:8000/api/blogs/${id}/comments/`,
+        `${BASE_URL}/blogs/${id}/comments/`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setComments(commentsRes.data);  // update state
@@ -200,7 +201,7 @@ const handleReply = async (parentId, content) => {
     try {
       // request deletion
       await axios.delete(
-        `http://127.0.0.1:8000/api/comments/${commentId}/`,
+        `${BASE_URL}/comments/${commentId}/`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       // filter out the deleted comment

@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './UserProfile.css';
 
-const BASE_URL = 'http://127.0.0.1:8000/api';
+const BASE_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const UserProfile = () => {
   const { userId } = useParams();

@@ -5,13 +5,14 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenVerifyView
 
 
+
 from .views.user_views import (
     signup,
     CustomTokenObtainPairView,
     PublicTokenRefreshView,
     logout,
 )
-from .views import user_views, blogs_views, portfolio_views, search_views, follow_views
+from .views import user_views, blogs_views, portfolio_views, search_views, follow_views, news_views
 from . import views  
 
 
@@ -73,6 +74,9 @@ urlpatterns = [
     path('unfollow/<int:user_id>/', follow_views.unfollow_user, name='unfollow_user'),# Unfollow a user
     path('user/<int:user_id>/followers/', follow_views.user_followers, name='user_followers'),# Get user followers
     path('user/<int:user_id>/following/', follow_views.user_following, name='user_following'),# Get users followed by user
+    
+    # News
+    path('news/', news_views.crypto_news, name='crypto_news'),
 ]
 
 if settings.DEBUG:
