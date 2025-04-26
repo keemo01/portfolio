@@ -9,8 +9,7 @@ import RiskMetricsCard from '../../components/Metrics/RiskMetricsCard';
 import './Portfolio.css';
 import axios from 'axios';
 
-const BASE_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
-
+const BASE_URL = process.env.REACT_APP_BACKEND_URL;
 
 const Portfolio = () => {
   const { user } = useUser();
@@ -83,7 +82,7 @@ const Portfolio = () => {
     
     setLoading(true);
     try {
-      const response = await axios.get(`${BASE_URL}/portfolio/`, {
+      const response = await axios.get(`${BASE_URL}/api/portfolio/`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -130,7 +129,7 @@ const Portfolio = () => {
   const fetchApiKeysStatus = useCallback(async () => {
     if (!validateToken()) return;
     try {
-      const response = await axios.get(`${BASE_URL}/profile/api-keys/`, {
+      const response = await axios.get(`${BASE_URL}/api/profile/api-keys/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -161,7 +160,7 @@ const Portfolio = () => {
         params.append('coin', coin);
       }
       
-      const response = await axios.get(`http://127.0.0.1:8000/api/portfolio/history/`, {
+      const response = await axios.get(`${BASE_URL}/api/portfolio/history/`, {
         params,
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -207,7 +206,7 @@ const Portfolio = () => {
     setApiError(null);
     try {
       const response = await axios.post(
-        `${BASE_URL}/profile/api-keys/`,
+        `${BASE_URL}/api/profile/api-keys/`,
         apiKeys,
         {
           headers: {
@@ -243,7 +242,7 @@ const Portfolio = () => {
     setApiError(null);
     try {
       const response = await axios.delete(
-        `${BASE_URL}/profile/api-keys/`,
+        `${BASE_URL}/api/profile/api-keys/`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,

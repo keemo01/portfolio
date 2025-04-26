@@ -31,6 +31,10 @@ ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',')
 NEWSAPI_KEY = os.environ['NEWSAPI_KEY']
 
 
+BINANCE_PUBLIC_BASE = os.getenv("BINANCE_PUBLIC_BASE", "https://data.binance.com")
+BINANCE_API_BASE    = os.getenv("BINANCE_API_BASE",    "https://api2.binance.com")
+
+
 # MEDIA
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -119,7 +123,7 @@ except Exception as e:
     raise ValueError(f'Invalid encryption key format: {e}')
 
 # CELERY
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+CELERY_BROKER_URL    = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'

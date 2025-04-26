@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
+from backend.portfolio.settings import BINANCE_API_BASE, BINANCE_PUBLIC_BASE
 from tracker.views.portfolio_utils import aggregate_portfolio_holdings, calculate_portfolio_metrics
 from tracker.models import PortfolioHolding, APIKey, PortfolioHistory
 
@@ -48,7 +49,7 @@ def get_binance_price(coin):
     for attempt in range(1, MAX_ATTEMPTS+1):
         try:
             resp = binance_session.get(
-                "https://api.binance.com/api/v3/ticker/price",
+                f"{BINANCE_PUBLIC_BASE}/api/v3/ticker/price",
                 params={'symbol': pair},
                 timeout=5
             )
@@ -461,7 +462,7 @@ def portfolio(request):
                 qs.encode('utf-8'),
                 hashlib.sha256
             ).hexdigest()
-            url = f"https://api.binance.com/api/v3/account?{qs}&signature={sig}"
+            url = f"{BINANCE_API_BASE}/api/v3/account?{qs}&signature={sig}"
             headers = {'X-MBX-APIKEY': api_keys.binance_api_key}
 
             resp = binance_session.get(url, headers=headers, timeout=10)
