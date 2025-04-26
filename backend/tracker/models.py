@@ -191,7 +191,7 @@ class Follow(models.Model):
 
 class Like(models.Model):
     """
-    Stores a like linking a user to a blog post.
+    Stores a like linking a user to a blog post
     Ensures that each blog can be liked only once per user.
     """
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')
