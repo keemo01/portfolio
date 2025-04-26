@@ -14,7 +14,7 @@ def home(request):
 urlpatterns = [
     path('', home, name='home'),                    
     path('admin/', admin.site.urls),                
-    path('api/', include('tracker.urls')),           
+    path('api/v3/', include('tracker.urls')),         
 
     # Authentication at root
     re_path(r'^login/?$', CustomTokenObtainPairView.as_view(), name='login'),# Login

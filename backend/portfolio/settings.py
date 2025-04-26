@@ -66,7 +66,9 @@ MIDDLEWARE = [
 
 CORS_ALLOW_ALL_HEADERS = True
 
-ROOT_URLCONF = 'tracker.urls'
+ROOT_URLCONF = 'portfolio.urls'
+WSGI_APPLICATION = 'portfolio.wsgi.application'
+ASGI_APPLICATION = 'portfolio.asgi.application'
 
 TEMPLATES = [
     {
@@ -84,8 +86,6 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'tracker.wsgi.application'
-ASGI_APPLICATION = 'tracker.asgi.application'
 
 # CHANNELS
 CHANNEL_LAYERS = {
