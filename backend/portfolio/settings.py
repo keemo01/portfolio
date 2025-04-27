@@ -40,6 +40,12 @@ BINANCE_PUBLIC_BASE = os.getenv("BINANCE_PUBLIC_BASE", "https://api.binance.com"
 BYBIT_API_BASE = os.getenv("BYBIT_API_BASE", "https://api.bybit.com")
 BYBIT_PUBLIC_BASE = os.getenv("BYBIT_PUBLIC_BASE", "https://api.bybit.com")
 
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME':   os.environ['CLOUDINARY_CLOUD_NAME'],
+    'API_KEY':      os.environ['CLOUDINARY_API_KEY'],
+    'API_SECRET':   os.environ['CLOUDINARY_API_SECRET'],
+    'SECURE':       True,
+}
 
 
 # MEDIA
