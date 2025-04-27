@@ -267,46 +267,79 @@ table-layout div {
   line-height: 1.4;
 }
 
-/* mobile: stack cards */
-@media (max-width: 768px) {
-  .features-row {
-    flex-direction: column;
-    align-items: center;
-  }
-  .feature-card {
-    flex: 1 1 100%;
+/* wrap table in horizontal scroll on small screens */
+@media (max-width: 600px) {
+  .crypto-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 1rem 0;
   }
 }
 
-
-
-
-/* Responsive */
-@media (max-width: 768px) {
-  .hero {
-    grid-template-columns: 1fr;
-    text-align: center;
+/* turn each coin-row into a card on very small screens */
+@media (max-width: 480px) {
+  .table-layout.header-row {
+    display: none;          
   }
+  .table-layout.coin-row {
+    display: block;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #1a1c24;
+  }
+  .table-layout.coin-row p {
+    display: flex;
+    justify-content: space-between;
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+  }
+  .table-layout.coin-row .coin-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .table-layout.coin-row .coin-info img {
+    width: 32px;
+    height: 32px;
+  }
+  .table-layout.coin-row .market-cap {
+    justify-content: space-between;
+  }
+}
 
-  .search-form {
+/*Bring hero content closer */
+@media (max-width: 600px) {
+  .hero-visual {
+    height: auto;
+    max-height: 300px;
+  }
+  .hero-visual img {
+    transform: none;
+  }
+  .hero-content h1 {
+    font-size: 2rem;
+  }
+  .hero-content p {
+    font-size: 1rem;
+  }
+  .hero-buttons {
     flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
+/* reduce padding on search section */
+@media (max-width: 480px) {
+  .search-section {
+    padding: 0 1rem;
+  }
+  .search-form {
     width: 100%;
-    gap: 1rem;
   }
-
-  .search-form input {
+  .btn-search, .search-form input {
     width: 100%;
-  }
-
-  .table-layout {
-    grid-template-columns: 40px 1fr 100px 100px;
-    grid-template-areas:
-      "rank name price change";
-  }
-
-  /* Hide columns on mobile */
-  .table-layout.header-row p:nth-child(5),
-  .table-layout p:nth-child(5) {
-    display: none;
   }
 }

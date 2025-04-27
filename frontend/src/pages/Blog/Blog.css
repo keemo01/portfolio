@@ -530,3 +530,179 @@
     background: rgba(224, 36, 94, 0.1);
     color: var(--color-danger-hover, #c21f4a);
   }
+
+
+  /* ==========================================================================
+   Mobile Styles
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* Mobile Adjustments */
+  body {
+    padding: 0;
+    font-size: 14px;
+  }
+
+  /* Make the blog container stack vertically on smaller screens */
+  .blog-container {
+    flex-direction: column;
+    margin: 1rem;
+    gap: 1rem;
+    padding: 0;
+  }
+
+  /* Stack the main content and news container on smaller screens */
+  .main-content {
+    flex: none;
+    width: 100%;
+  }
+
+  .news-container {
+    position: relative;
+    top: initial;
+    width: 100%;
+  }
+
+  /* Decrease the padding in blog posts and other elements */
+  .blog-post,
+  .tweet,
+  .news-item,
+  .comment {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .post-header h1 {
+    font-size: 1.8rem; /* Smaller font for headers on mobile */
+  }
+
+  /* Reduce the padding and margins in the search section */
+  .search-container {
+    margin-bottom: 1rem;
+  }
+
+  .search-input {
+    padding: 0.6rem;
+    font-size: 1rem;
+    border-radius: 8px;
+  }
+
+  .search-suggestions {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .comment-content {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  /* Adjust for smaller buttons */
+  .post-footer button,
+  .tweet-actions .action {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .bookmark-btn,
+  .publish-button,
+  .comment-form button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  /* Hero and media content adjustments */
+  .post-media-preview {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .post-media-preview img,
+  .post-media-preview video {
+    width: 100%;
+    height: auto;
+  }
+
+  .media-preview,
+  .blog-media-content {
+    width: 100%;
+    height: auto;
+  }
+
+  .fab {
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 50px;
+    height: 50px;
+    font-size: 28px;
+  }
+
+  /* Comments section adjustments */
+  .comment-header {
+    font-size: 0.85rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .comment-content {
+    font-size: 0.9rem;
+  }
+
+  .comment-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* Form & modal adjustments */
+  .create-blog-form {
+    padding: 1rem;
+    width: 100%;
+  }
+
+  .form-content {
+    margin-bottom: 1rem;
+  }
+
+  .media-upload-section {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .title-input,
+  .content-input {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .media-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 1rem;
+  }
+
+  /* Adjust floating action button size for smaller screens */
+  .fab {
+    width: 45px;
+    height: 45px;
+    font-size: 24px;
+  }
+
+  .download-media-button {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  /* Comments section */
+  .comments-list {
+    margin-top: 1rem;
+  }
+
+  .reply-form textarea {
+    font-size: 0.9rem;
+    padding: 0.4rem;
+  }
+
+  .delete-btn {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+  }
+}

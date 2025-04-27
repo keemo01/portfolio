@@ -131,30 +131,46 @@ const Portfolio = () => {
   }, [token, navigate, validateToken]);
 
   // Fetch API keys status
-  const fetchApiKeysStatus = useCallback(async () => {
-    if (!validateToken()) return;
-    try {
-      const response = await axios.get(`${BASE_URL}/api/profile/api-keys/`, {
+  // Fetch API keys status
+const fetchApiKeysStatus = useCallback(async () => {
+  if (!validateToken()) return;
+
+  try {
+    const response = await axios.get(
+      `${BASE_URL}/api/profile/api-keys/`,
+      {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
+      }
+    );
+    console.log('[Portfolio] /api/profile/api-keys/ →', response.data);
+
+    if (response.data) {
+      //
+      setApiKeyStatus({
+        binance: !!response.data.binance_api_key,
+        bybit:   !!response.data.bybit_api_key
       });
-      console.log('[Portfolio] /api/profile/api-keys/ →', response.data);
-      if (response.data) {
-        console.log('[Portfolio] setting apiKeyStatus to', {
-          binance: !!response.data.binance_api_key,
-          bybit: !!response.data.bybit_api_key
-        });
-      }
-    } catch (err) {
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        localStorage.removeItem('access_token');
-        navigate('/login');
-      }
-      console.error('Error fetching API keys:', err);
+
+      // Update the API keys state
+      setApiKeys(prev => ({
+        ...prev,
+        binance_api_key: response.data.binance_api_key || '',
+        bybit_api_key:   response.data.bybit_api_key   || ''
+      }));
     }
-  }, [token, navigate, validateToken]);
+  } catch (err) {
+    if (err.response?.status === 401 || err.response?.status === 403) {
+      localStorage.removeItem('access_token');
+      navigate('/login');
+    } else {
+      console.error('[Portfolio] Error fetching API keys status:', err);
+    }
+  }
+}, [token, navigate, validateToken]);
+
 
   // Fetch historical data for charts
   const fetchHistoricalData = useCallback(async (days = 30, coin = null) => {
@@ -227,13 +243,29 @@ const Portfolio = () => {
           }
         }
       );
+  
+      console.log('[handleSubmitApiKeys] Response:', response.data);  
+  
       if (response.data) {
         setApiKeyStatus({
           binance: !!response.data.binance_api_key,
           bybit: !!response.data.bybit_api_key
         });
+  
+       
+        console.log('[handleSubmitApiKeys] API Key Status Updated:', {
+          binance: !!response.data.binance_api_key,
+          bybit: !!response.data.bybit_api_key
+        });
+  
         setShowApiModal(false);
+  
+        
         await fetchPortfolioData();
+        await fetchApiKeysStatus();
+  
+        
+        console.log('[handleSubmitApiKeys] After refetching:');
         await fetchApiKeysStatus();
       }
     } catch (err) {
@@ -246,6 +278,8 @@ const Portfolio = () => {
       setSavingKeys(false);
     }
   };
+  
+  
 
   // Handle API keys removal
   const handleRemoveApiKeys = async (exchange) => {
@@ -483,6 +517,8 @@ const Portfolio = () => {
                 </Button>
               </div>
             )}
+
+            {/* Bybit API Keys Section */}
             <h5 className="mb-3">
               Bybit API Keys {apiKeyStatus.bybit && <Badge bg="success" className="ms-2">Active</Badge>}
             </h5>

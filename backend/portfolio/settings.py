@@ -1,4 +1,5 @@
 import os
+import ssl
 import pymysql
 import dj_database_url
 
@@ -149,16 +150,20 @@ except Exception as e:
     raise ValueError(f'Invalid encryption key format: {e}')
 
 # CELERY
-CELERY_BROKER_URL    = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = CELERY_BROKER_URL
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
+CELERY_BROKER_URL         = os.environ['REDIS_URL']
+CELERY_RESULT_BACKEND     = os.environ['REDIS_URL']
+CELERY_ACCEPT_CONTENT     = ['json']
+CELERY_TASK_SERIALIZER    = 'json'
+CELERY_RESULT_SERIALIZER  = 'json'
+CELERY_TIMEZONE           = 'UTC'
+
+CELERY_BROKER_USE_SSL        = { 'ssl_cert_reqs': ssl.CERT_NONE }
+CELERY_RESULT_BACKEND_USE_SSL = { 'ssl_cert_reqs': ssl.CERT_NONE }
+
 CELERY_BEAT_SCHEDULE = {
     'portfolio-hourly-snapshot': {
         'task': 'tracker.tasks.update_portfolio_snapshot',
-        'schedule': 43200.0,
+        'schedule': 120.0,
         'args': ('hourly',),
     },
     'portfolio-daily-snapshot': {

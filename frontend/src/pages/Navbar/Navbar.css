@@ -1,0 +1,46 @@
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #0f1015;     
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+  }
+  
+  body {
+    padding-top: 3.5rem;
+  }
+  
+  /* Navbar links */
+.nav-links {
+    display: flex;
+    gap: 1rem;
+  }
+  .hamburger {
+    display: none;
+    cursor: pointer;
+  }
+  
+  /* mobile breakpoint */
+  @media (max-width: 768px) {
+    .nav-links {
+      display: none;  
+      flex-direction: column;
+      background: #1a1c24;
+      position: absolute;
+      top: 3.5rem;             
+      left: 0;
+      width: 100%;
+    }
+    .hamburger {
+      display: block; 
+    }
+    .nav-links.open {
+      display: flex; 
+    }
+  }
+  
