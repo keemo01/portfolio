@@ -11,7 +11,7 @@ app.conf.broker_use_ssl = {
     "ssl_cert_reqs": ssl.CERT_NONE
     }
 
-app.conf.result_backend_use_ssl = {
+app.conf.redis_backend_use_ssl = {
     "ssl_cert_reqs": ssl.CERT_NONE
     }
 
