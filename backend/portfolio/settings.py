@@ -32,6 +32,7 @@ ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',')
 NEWSAPI_KEY = os.environ['NEWSAPI_KEY']
 
 
+
 BINANCE_API_BASE = os.getenv("BINANCE_API_BASE", "https://api.binance.com")
 BINANCE_PUBLIC_BASE = os.getenv("BINANCE_PUBLIC_BASE", "https://api.binance.com")
 
@@ -42,6 +43,7 @@ BYBIT_PUBLIC_BASE = os.getenv("BYBIT_PUBLIC_BASE", "https://api.bybit.com")
 
 
 # MEDIA
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -62,6 +64,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'channels',
+    'cloudinary',
+    'cloudinary_storage',
 ]
 
 MIDDLEWARE = [
