@@ -201,7 +201,7 @@ const Blog = () => {
           }
         }
       );
-      alert(res.data.detail);
+      alert('Bookmarked successfully!');
     } catch (error) {
       console.error("Error bookmarking blog:", error);
       alert("Error bookmarking blog. Please try again.");

@@ -234,6 +234,14 @@ const handleReply = async (parentId, content) => {
     <div className="blog-container">
       <Link to="/blog" className="back-link">← Back to Blog</Link>
       <div className="blog-post detailed-post">
+      <h1 className="blog-title">{blog.title}</h1>
+
+      <div className="blog-content">
+
+      {blog.content.split('\n').map((line, idx) => (
+        <p key={idx}>{line}</p>
+      ))}
+      </div>
 
 
         {blog.media && blog.media.length > 0 && (
