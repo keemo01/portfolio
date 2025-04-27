@@ -13,7 +13,9 @@ const formatDateTime = (dateString) => {
   const date = new Date(dateString);
   const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
   const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
-  return `${date.toLocaleDateString('en-US', dateOptions)} - ${date.toLocaleTimeString('en-US', timeOptions).replace(' ', '')}`;
+  return `${date.toLocaleDateString('en-US', dateOptions)} - ${date
+    .toLocaleTimeString('en-US', timeOptions)
+    .replace(' ', '')}`;
 };
 
 // Function to highlight search query in text
@@ -21,13 +23,14 @@ const highlightText = (text, query) => {
   if (!query) return text;
   const parts = text.split(new RegExp(`(${query})`, 'gi'));
   return parts.map((part, index) =>
-    part.toLowerCase() === query.toLowerCase()
-      ? <mark key={index}>{part}</mark>
-      : part
+    part.toLowerCase() === query.toLowerCase() ? (
+      <mark key={index}>{part}</mark>
+    ) : (
+      part
+    )
   );
 };
 
-// Main Blog component
 const Blog = () => {
   const [state, setState] = useState({
     blogs: [],
@@ -42,96 +45,112 @@ const Blog = () => {
     showSuggestions: false,
     news: [],
     mediaPreview: [],
-    isLoading: true
+    isLoading: true,
   });
-
-  // State to manage likes
-  // This will hold the like count and liked status for each blog post
   const [likeData, setLikeData] = useState({});
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
 
+  // Redirect to login if not authenticated
   useEffect(() => {
-    if (!user) {
-      // kick them out
-      navigate('/login', { replace: true });
-    }
+    if (!user) navigate('/login', { replace: true });
   }, [user, navigate]);
 
-  // Fetch blog posts from the API
-  // This function fetches all blog posts and their like counts
+  // Fetch blogs & like‐counts
+  // Fetch blog posts
   const fetchBlogs = async () => {
     try {
       const response = await axios.get(`${BASE_URL}/blogs/`);
-      const blogs = response.data;
-      setState(prev => ({ ...prev, blogs }));
+      console.log('Got /blogs/ →', response.data);
+      const data = response.data;
+
+      // Normalize to an array
+      const blogsArray = Array.isArray(data)
+        ? data
+        : Array.isArray(data.blogs)
+        ? data.blogs
+        : [];
+      
+      // Set blogs in state
+      setState((prev) => ({ ...prev, blogs: blogsArray }));
+
+      // Fetch like counts in parallel
       const updatedLikeData = {};
       await Promise.all(
-        blogs.map(async (blog) => {
+        blogsArray.map(async (blog) => {
           const config = user
             ? { headers: { Authorization: `Bearer ${user.token}` } }
             : {};
           try {
+            // Fetch like count for each blog
             const res = await axios.get(
               `${BASE_URL}/blogs/${blog.id}/like/count/`,
               config
             );
             updatedLikeData[blog.id] = {
               likeCount: res.data.like_count,
-              liked: res.data.liked
+              liked: res.data.liked,
             };
-          } catch (error) {
+          } catch {
             updatedLikeData[blog.id] = { likeCount: 0, liked: false };
           }
         })
       );
+      // Set like data in state
       setLikeData(updatedLikeData);
     } catch (error) {
       console.error('Error fetching blogs:', error);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        error: 'Failed to load blogs. Please refresh the page.'
+        error: 'Failed to load blogs. Please refresh the page.',
       }));
     }
   };
 
-  // Fetch news articles from NewsAPI
+  // Fetch latest news
   const fetchNews = async () => {
     try {
-      const { data } = await axios.get(`${BASE_URL}/news/`);
-      setState(prev => ({ ...prev, news: data }));
+      const response = await axios.get(`${BASE_URL}/news/`);
+      console.log('Got /news/ →', response.data);
+      const data = response.data;
+
+      // Normalize to an array
+      const newsArray = Array.isArray(data)
+        ? data
+        : Array.isArray(data.articles)
+        ? data.articles
+        : [];
+
+      setState((prev) => ({ ...prev, news: newsArray }));
     } catch (error) {
       console.error('Error fetching news:', error);
     }
   };
 
-  // Fetch blogs and news on component mount
+  // On mount, fetch both
   useEffect(() => {
-  if (!user) {
-            setState(prev => ({ ...prev, isLoading: false }));
-            return;
-          }
-  const fetchData = async () => {
-    try {
-      await Promise.all([fetchBlogs(), fetchNews()]);
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        error: 'Failed to load data. Please refresh the page.'
-      }));
-    } finally {
-      setState(prev => ({ ...prev, isLoading: false }));
+    if (!user) {
+      setState((prev) => ({ ...prev, isLoading: false }));
+      return;
     }
-  };
-  fetchData();
+    const fetchData = async () => {
+      try {
+        await Promise.all([fetchBlogs(), fetchNews()]);
+      } catch {
+        setState((prev) => ({
+          ...prev,
+          error: 'Failed to load data. Please refresh the page.',
+        }));
+      } finally {
+        setState((prev) => ({ ...prev, isLoading: false }));
+      }
+    };
+    fetchData();
   }, [user]);
 
   useEffect(() => {
-    if (user) {
-      fetchBlogs();
-    } else {
-      setLikeData({});
-    }
+    if (user) fetchBlogs();
+    else setLikeData({});
   }, [user]);
 
   // Handle search input and fetch results

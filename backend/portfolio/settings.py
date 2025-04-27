@@ -9,6 +9,7 @@ from celery.schedules import crontab
 from cryptography.fernet import Fernet
 from venv import logger
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # Use PyMySQL as MySQLdb
 pymysql.install_as_MySQLdb()
@@ -143,17 +144,16 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-DATABASE_URL = (
-    os.environ.get('DATABASE_URL') or
-    os.environ.get('JAWSDB_URL')     or
-    os.environ.get('CLEARDB_DATABASE_URL')
-)
+DATABASE_URL = os.environ.get('JAWSDB_URL')
+if not DATABASE_URL:
+    raise ImproperlyConfigured("JAWSDB_URL env var not set")
 
 # DATABASE
 DATABASES = {
     'default': dj_database_url.parse(
         DATABASE_URL,
         conn_max_age=600,
+        ssl_require=True,      
         engine='django.db.backends.mysql'
     )
 }
