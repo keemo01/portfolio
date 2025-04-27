@@ -36,6 +36,7 @@ urlpatterns = [
     path('blogs/<int:blog_id>/comments/', blogs_views.blog_comments, name='blog_comments'),# Get blog comments
     path('blogs/<int:blog_id>/like/', blogs_views.like_post, name='like_post'),# Like a blog post
     path('blogs/<int:blog_id>/like/count/', blogs_views.like_count, name='blog_like_count'),# Get like count
+    
 
     # User‑specific blog routes
     path('user-blogs/', user_views.user_blogs, name='user_blogs'),# Get user blogs

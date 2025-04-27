@@ -47,7 +47,7 @@ def blog_detail(request, pk):
 @parser_classes([MultiPartParser, FormParser])
 def create_blog(request):
     """
-    Allows authenticated users to create a new blog with images/videos.
+    Allows authenticated users to create a new blog with images/videos
     """
     data = request.data
     blog_serializer = BlogSerializer(data=data, context={'request': request})
@@ -62,6 +62,7 @@ def create_blog(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     return Response(blog_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['DELETE'])
 @authentication_classes([JWTAuthentication])
@@ -137,7 +138,7 @@ def blog_comments(request, blog_id):  # blog_id is passed as a parameter
 @permission_classes([IsAuthenticated])
 def delete_comment(request, comment_id):
     """
-    DELETE /api/comments/<comment_id>/
+    Delete a comment 
     """
     comment = get_object_or_404(Comment, id=comment_id)
     if comment.author != request.user:

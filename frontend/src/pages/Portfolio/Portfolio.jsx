@@ -16,7 +16,7 @@ const Portfolio = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('access_token');
 
-  // Validate token and redirect to login if invalid.
+  // Validate token and redirect to login if invalid
   const validateToken = useCallback(() => {
     if (!token) {
       navigate('/login');
@@ -130,7 +130,6 @@ const Portfolio = () => {
     }
   }, [token, navigate, validateToken]);
 
-  // Fetch API keys status
   // Fetch API keys status
 const fetchApiKeysStatus = useCallback(async () => {
   if (!validateToken()) return;

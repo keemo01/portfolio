@@ -80,6 +80,9 @@ export default function BlogPost() {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [notFound, setNotFound] = useState(false);
+ 
+
+
 
   const handleDownloadMedia = async (url) => {
     try {
@@ -155,6 +158,8 @@ const formatDate = (dateString) => {
   
     fetchBlogPost();
   }, [id]);  // re-run when the post ID changes
+
+  
   
   // Handle new comment submission
   const handleCommentSubmit = async (e) => {
@@ -229,12 +234,7 @@ const handleReply = async (parentId, content) => {
     <div className="blog-container">
       <Link to="/blog" className="back-link">← Back to Blog</Link>
       <div className="blog-post detailed-post">
-        <div className="post-header">
-          <h1>{blog.title}</h1>
-        </div>
-        <div className="post-content">
-          {blog.content.split('\n').map((para, i) => <p key={i}>{para}</p>)}
-        </div>
+
 
         {blog.media && blog.media.length > 0 && (
           <div className="blog-media-container">

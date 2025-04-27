@@ -161,14 +161,9 @@ CELERY_BROKER_USE_SSL        = { 'ssl_cert_reqs': ssl.CERT_NONE }
 CELERY_RESULT_BACKEND_USE_SSL = { 'ssl_cert_reqs': ssl.CERT_NONE }
 
 CELERY_BEAT_SCHEDULE = {
-    'portfolio-hourly-snapshot': {
-        'task': 'tracker.tasks.update_portfolio_snapshot',
-        'schedule': 120.0,
-        'args': ('hourly',),
-    },
     'portfolio-daily-snapshot': {
         'task': 'tracker.tasks.update_portfolio_snapshot',
-        'schedule': crontab(hour=0, minute=0),
+        'schedule': crontab(hour=0, minute=0), # every day at 12am it'll run and take a snapshot
         'args': ('daily',),
     },
 }
