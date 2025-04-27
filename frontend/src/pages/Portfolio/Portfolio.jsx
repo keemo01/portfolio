@@ -82,15 +82,19 @@ const Portfolio = () => {
     
     setLoading(true);
     try {
+      console.log('[Portfolio] fetching /api/portfolio/');
       const response = await axios.get(`${BASE_URL}/api/portfolio/`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+      console.log('[Portfolio]  raw response.data:', response.data);
       const { portfolio, total_value, total_cost, allocation, exchange_distribution, errors } = response.data;
+      console.log('[Portfolio] unpacked:', { portfolio, total_value, errors });
       
       if (portfolio) {
+        console.log('[Portfolio] processing portfolio array, length =', portfolio.length);
         const sortedHoldings = portfolio
           .sort((a, b) => parseFloat(b.current_value) - parseFloat(a.current_value))
           .map(holding => ({
@@ -111,6 +115,7 @@ const Portfolio = () => {
         setError(null);
       }
       if (errors?.length) {
+        console.warn('[Portfolio] API returned errors:', errors);
         setError(errors.join('. '));
       }
     } catch (err) {
@@ -135,8 +140,9 @@ const Portfolio = () => {
           'Content-Type': 'application/json'
         }
       });
+      console.log('[Portfolio] /api/profile/api-keys/ →', response.data);
       if (response.data) {
-        setApiKeyStatus({
+        console.log('[Portfolio] setting apiKeyStatus to', {
           binance: !!response.data.binance_api_key,
           bybit: !!response.data.bybit_api_key
         });
@@ -167,8 +173,14 @@ const Portfolio = () => {
           'Content-Type': 'application/json'
         }
       });
+      console.log('[Portfolio] /api/portfolio/history/?days=', days, 'coin=', coin, '→', response.data);
       if (response.data?.history) {
-        setHistoricalData(response.data.history);
+        const history = response.data.history.map(item => ({
+          ...item,
+          value: parseFloat(item.value),
+          date: new Date(item.date).getTime()
+        }));
+        setHistoricalData(history);
       }
     } catch (err) {
       if (err.response?.status === 401 || err.response?.status === 403) {

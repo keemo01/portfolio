@@ -80,46 +80,32 @@ def get_bybit_price(coin):
     if coin.upper() == 'USDT':
         return 1.0
 
-    url = "https://api.bybit.com/v5/market/tickers"
+    url = f"{settings.BYBIT_PUBLIC_BASE}/v5/market/tickers"
     params = {"category": "spot", "symbol": f"{coin}USDT"}
 
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            logger.info("Fetching Bybit price for %s (attempt %d/%d) with params: %s",
-                        coin, attempt, MAX_ATTEMPTS, params)
-            response = session.get(url, params=params, timeout=5)
+            resp = session.get(url, params=params, timeout=5)
+            resp.raise_for_status()
+            data = resp.json()
 
-            # Check for HTTP errors
-            if response.status_code != 200:
-                logger.warning("Bybit returned status %d for %s, aborting retries",
-                               response.status_code, coin)
-                return None
-
-            data = response.json() # Check for JSON errors
+            # Bybit V5 returns retCode == 0 on success
             if data.get("retCode") == 0 and data.get("result", {}).get("list"):
-                price = float(data["result"]["list"][0]["lastPrice"])
-                logger.info("Found price for %s: $%s", coin, price)
-                return price
+                return float(data["result"]["list"][0]["lastPrice"])
 
-            logger.warning("No price data found for %s (retCode=%s)", coin, data.get("retCode"))
+            logger.warning("Bybit no data for %s: %s", coin, data)
             return None
 
         except (requests.ReadTimeout, requests.ConnectTimeout) as e:
-            # Timeout occurred waiting a bit before trying again
             wait = BASE_SLEEP * (2 ** (attempt - 1))
-            logger.warning(
-                "Timeout fetching %s (attempt %d/%d): %s — retrying in %ds",
-                coin, attempt, MAX_ATTEMPTS, e, wait
-            )
+            logger.warning("Bybit timeout %s (attempt %d): retrying in %ds", coin, attempt, wait)
             time.sleep(wait)
 
         except Exception as e:
-            # any other Errors: log and stop retrying
-            logger.error("Error fetching Bybit price for %s: %s", coin, e)
+            logger.error("Bybit fetch error %s: %s", coin, e)
             return None
 
-    # if all attempts fail
-    logger.warning("Bybit: no price for %s after %d attempts", coin, MAX_ATTEMPTS)
+    logger.warning("Bybit giving up on %s after %d attempts", coin, MAX_ATTEMPTS)
     return None
 
 def get_bybit_holdings(api_key, secret_key):
@@ -146,28 +132,32 @@ def get_bybit_holdings(api_key, secret_key):
     ]
     
     for account in accounts:
-        url = f"https://api.bybit.com{account['endpoint']}"
+        url = f"{settings.BYBIT_API_BASE}{account['endpoint']}"
         
         for i in range(0, len(all_coins), 10):
             coin_batch = all_coins[i:i + 10]
             params = {"accountType": account["type"], "coin": ",".join(coin_batch)}
             
-            timestamp = str(int(time.time() * 1000))
+            timestamp   = str(int(time.time() * 1000))
             recv_window = "5000"
             # Sort parameters for signature
-            param_str = urlencode(sorted(params.items()))
+            param_str     = urlencode(sorted(params.items()))
             signature_str = timestamp + api_key + recv_window + param_str
-            signature = hmac.new(secret_key.encode('utf-8'), signature_str.encode('utf-8'), hashlib.sha256).hexdigest()
+            signature     = hmac.new(
+                secret_key.encode('utf-8'),
+                signature_str.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()
             
             headers = {
-                'X-BAPI-API-KEY': api_key,
-                'X-BAPI-SIGN': signature,
-                'X-BAPI-TIMESTAMP': timestamp,
-                'X-BAPI-RECV-WINDOW': recv_window
+                'X-BAPI-API-KEY':      api_key,
+                'X-BAPI-SIGN':         signature,
+                'X-BAPI-TIMESTAMP':    timestamp,
+                'X-BAPI-RECV-WINDOW':  recv_window
             }
             
             try:
-                response = session.get(url, headers=headers, params=params, timeout=10)  # Using session here
+                response = session.get(url, headers=headers, params=params, timeout=10)
                 if response.status_code == 200:
                     data = response.json()
                     if data.get('retCode') == 0:
@@ -187,12 +177,12 @@ def get_bybit_holdings(api_key, secret_key):
                                     original_value = None
                                 
                                 all_balances.append({
-                                        'coin':          coin_data['coin'],
-                                        'amount':        wallet_balance,
-                                        'transferable':  transferable,
-                                        'account_type':  account["type"],
-                                        'original_value': original_value
-                                    })
+                                    'coin':           coin_data['coin'],
+                                    'amount':         wallet_balance,
+                                    'transferable':   transferable,
+                                    'account_type':   account["type"],
+                                    'original_value': original_value
+                                })
             except Exception as e:
                 logger.error("Error fetching batch %s: %s", i // 10 + 1, e)
                 continue
@@ -210,16 +200,16 @@ def get_bybit_cost_basis(api_key, secret_key, coin, amount):
         return amount
         
     try:
-        cost_endpoint = "/v5/position/info"
+        cost_endpoint = f"{settings.BYBIT_API_BASE}/v5/position/info"
         cost_params = {
             "category": "linear",  # Changed from Spot to Linear as Bybit doesn't support cost basis for Spot
             "symbol": f"{coin}USDT"
         }
         
-        timestamp = str(int(time.time() * 1000))
-        recv_window = "5000"
-        cost_param_str = urlencode(sorted(cost_params.items()))
-        signature_str = timestamp + api_key + recv_window + cost_param_str
+        timestamp    = str(int(time.time() * 1000))
+        recv_window  = "5000"
+        cost_param_str  = urlencode(sorted(cost_params.items()))
+        signature_str   = timestamp + api_key + recv_window + cost_param_str
         signature = hmac.new(secret_key.encode('utf-8'), signature_str.encode('utf-8'), hashlib.sha256).hexdigest()
         
         headers = {
@@ -230,7 +220,7 @@ def get_bybit_cost_basis(api_key, secret_key, coin, amount):
         }
         
         response = session.get(
-            f"https://api.bybit.com{cost_endpoint}", 
+            cost_endpoint, 
             headers=headers, 
             params=cost_params,
             timeout=5
@@ -428,6 +418,7 @@ def portfolio(request):
 
     # — Bybit holdings —
     if api_keys and has_bybit:
+        logger.info("Fetching Bybit holdings for user %s", user.username)
         try:
             bybit_balances = get_bybit_holdings(api_keys.bybit_api_key, api_keys.bybit_secret_key)
             for h in bybit_balances:

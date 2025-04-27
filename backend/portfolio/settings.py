@@ -32,8 +32,12 @@ ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',')
 NEWSAPI_KEY = os.environ['NEWSAPI_KEY']
 
 
-BINANCE_API_BASE    = os.getenv("BINANCE_API_BASE", "https://api.binance.com")
+BINANCE_API_BASE = os.getenv("BINANCE_API_BASE", "https://api.binance.com")
 BINANCE_PUBLIC_BASE = os.getenv("BINANCE_PUBLIC_BASE", "https://api.binance.com")
+
+
+BYBIT_API_BASE = os.getenv("BYBIT_API_BASE", "https://api.bybit.com")
+BYBIT_PUBLIC_BASE = os.getenv("BYBIT_PUBLIC_BASE", "https://api.bybit.com")
 
 
 
